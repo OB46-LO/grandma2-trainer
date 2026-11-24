@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>grandMA2 Trainer v1.8</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: ruhiger Werkstatt-Lehrer – klar, praktisch, ermutigend
+   IDEA: das Pult selbst – die Seite verhält sich wie eine grandMA2 im Übungsmodus
+   PICTURE: gezeichnete Command-Sektion + kleine Bühne mit 12 Scheinwerfern, die live reagiert
+   COLOUR and TYPE: Pult-Anthrazit, Tastengrau, Signal-Cyan für "drück mich", Rot für Programmer-Werte wie auf der echten Konsole; Archivo + JetBrains Mono für die Command Line
+   LAYOUT: links Lektion (Text, Zeichnung, Aufgaben), rechts Simulator; unter 980px untereinander */
+:root{color-scheme:light dark;
+--bg:light-dark(#eceef0,#121416);--ink:light-dark(#17191c,#e8eaed);--mut:light-dark(#5b6168,#9aa1a9);
+--card:light-dark(#ffffff,#1b1e22);--line:light-dark(#d5d9de,#2c3036);
+--desk:#23262b;--desk2:#1a1c20;--key:#3a3e45;--keyt:#4a4f57;--keyb:#24272c;--kink:#eef0f2;
+--acc:#20d3e8;--accink:light-dark(#00707c,#20d3e8);--ok:light-dark(#178a4a,#3ddc84);--err:light-dark(#c62828,#ff6b6b);--prog:#ff4d4d}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Archivo,system-ui,sans-serif;overflow-x:clip;touch-action:manipulation;-webkit-text-size-adjust:100%;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+button,.k,nav button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.sim,.k{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.taskbar{margin-top:10px;background:#0f3a40;border:1px solid #20d3e8;border-radius:8px;padding:10px 12px;font-size:15px;line-height:1.4;color:#e8eaed}
+.taskbar b{color:#20d3e8;font-weight:700;margin-right:6px}.taskbar .kb{background:#3a3e45}
+.taskbar.ok{background:#123a24;border-color:#3ddc84}
+button{font:inherit;color:inherit}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding:14px max(3vw,16px);border-bottom:1px solid var(--line);background:var(--card)}
+h1{font-size:22px;line-height:1.1;margin:0;font-weight:800}
+h1 small{font-weight:600;color:var(--mut);font-size:14px;margin-left:6px}
+nav{display:flex;flex-wrap:wrap;gap:6px}
+nav button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:9px 16px;min-height:44px;cursor:pointer}
+nav button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.prog{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--mut)}
+.bar{width:140px;height:8px;border-radius:9px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .4s}
+main{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:20px;padding:20px max(3vw,16px);max-width:1500px;margin:auto}
+@media(max-width:980px){main{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.lsel{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+select{font:inherit;font-size:16px;flex:1;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:0 10px}
+.navb{min-width:44px;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer}
+.stufe{font-size:14px;color:var(--accink);font-weight:600;margin:0}
+h2{font-size:28px;line-height:1.1;margin:4px 0 12px;text-wrap:balance}
+.ltext p{margin:0 0 10px}.ltext ul{padding-left:20px;margin:0 0 10px}
+.kb{display:inline-block;font:700 13px/1 'JetBrains Mono',monospace;background:var(--key);color:var(--kink);border-radius:5px;padding:4px 7px;border-bottom:3px solid var(--keyb);margin:1px 1px;white-space:nowrap}
+.illu{margin:14px 0;background:var(--desk2);border-radius:12px;padding:10px}.illu svg{display:block;width:100%;height:auto}
+.tasks{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:8px}
+.tasks li{border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 40px;position:relative;font-size:15px}
+.tasks li::before{content:"";position:absolute;left:12px;top:12px;width:18px;height:18px;border-radius:50%;border:2px solid var(--line)}
+.tasks li.done{color:var(--mut)}.tasks li.done::before{background:var(--ok);border-color:var(--ok)}
+.tasks li.cur{border-color:var(--accink);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 30%,transparent)}
+.tasks li.cur::before{border-color:var(--accink)}
+.hint{margin-top:6px;font-size:14px;color:var(--mut)}
+.donebox{margin-top:14px;padding:14px;border-radius:12px;background:color-mix(in srgb,var(--ok) 14%,transparent);display:none}
+.donebox.show{display:block}
+.big{min-height:44px;padding:0 18px;border-radius:10px;border:0;background:var(--ink);color:var(--bg);font-weight:700;cursor:pointer}
+/* Simulator */
+.sim{background:var(--desk);border-radius:16px;padding:14px;color:#e8eaed;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.stage{position:relative;background:radial-gradient(ellipse at 50% 120%,#1c2026,#08090b 70%);border-radius:10px;padding:10px 8px 14px;overflow:hidden}
+.truss{height:6px;margin:0 4px 6px;background:repeating-linear-gradient(90deg,#666 0 6px,#333 6px 12px);border-radius:2px}
+.fx{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px}
+.fix{display:flex;flex-direction:column;align-items:center;font:600 11px/1.2 'JetBrains Mono',monospace;color:#9aa1a9}
+.lamp{width:min(30px,90%);aspect-ratio:1;border-radius:50%;border:2px solid #444;background:#111;transition:background .25s,box-shadow .25s}
+.fix.sel .lamp{border-color:#ffd400}.fix.step .lamp{border-color:#fff;outline:2px dashed #ffd400;outline-offset:2px}
+.beam{transform-origin:50% 0;-webkit-mask-repeat:repeat;mask-repeat:repeat;width:100%;height:clamp(50px,9vw,90px);clip-path:polygon(35% 0,65% 0,100% 100%,0 100%);transition:background .25s;margin-top:-2px}
+.fix .v{margin-top:4px;min-height:14px}.fix .v.p{color:var(--prog)}.fix .v.in{color:#777}
+.fix.eff .lamp,.fix.eff .beam{animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.08}}
+@media(prefers-reduced-motion:reduce){.fix.eff .lamp,.fix.eff .beam{animation:none;opacity:.6}}
+.badges{position:absolute;top:8px;right:10px;display:flex;gap:6px}
+.badges span{font:700 11px/1 'JetBrains Mono',monospace;padding:4px 6px;border-radius:4px;background:#c62828;color:#fff}
+.info{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px;font-size:13px}
+@media(max-width:600px){.info{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.info div{background:var(--desk2);border-radius:8px;padding:8px;min-height:64px}
+.info b{display:block;color:#9aa1a9;font-weight:600;font-size:12px;margin-bottom:3px}
+.info span{display:inline-block;margin:1px 4px 1px 0;font-family:'JetBrains Mono',monospace;font-size:12px}
+.info .cur{color:#3ddc84}
+.cmd{margin-top:10px;background:#000;border:1px solid #333;border-radius:8px;padding:10px 12px;font:500 16px/1.3 'JetBrains Mono',monospace;color:#f2f2f2;min-height:44px;overflow-wrap:anywhere}
+.cmd .pr{color:#20d3e8}.cmd .cu{display:inline-block;width:9px;height:17px;background:#20d3e8;vertical-align:-3px;animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+.fb{font:500 14px/1.35 'JetBrains Mono',monospace;margin-top:6px;min-height:20px;color:#9aa1a9}.fb.ok{color:#3ddc84}.fb.err{color:#ff6b6b}
+.kinfo{margin-top:8px;background:var(--desk2);border-radius:8px;padding:10px 12px;font-size:14px;min-height:62px}
+.kinfo b{color:#20d3e8;font-family:'JetBrains Mono',monospace}
+.desk{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px;margin-top:12px}
+.blk{background:var(--desk2);border-radius:10px;padding:8px 8px 10px}
+.blk h4{margin:0 0 6px;font-size:12px;font-weight:600;color:#9aa1a9}
+.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.k{min-height:44px;border:0;border-radius:6px;background:linear-gradient(#4b5058,var(--key));color:var(--kink);font:700 13px/1 'JetBrains Mono',monospace;box-shadow:0 4px 0 var(--keyb),inset 0 1px 0 rgba(255,255,255,.12);cursor:pointer;padding:0 2px;transition:transform .05s}
+.k:active,.k.hit{transform:translateY(3px);box-shadow:0 1px 0 var(--keyb)}
+.k.obj{color:#ffe066}.k.num{background:linear-gradient(#5a5f68,#454a52);font-size:16px}
+.k.please{grid-column:span 2;background:linear-gradient(#5a5f68,#454a52);color:#20d3e8}
+.k.pb{color:#8ef0a8}.k.mode{color:#ffb3b3}
+.k.glow{outline:2px solid var(--acc);outline-offset:2px;box-shadow:0 4px 0 var(--keyb),0 0 14px rgba(32,211,232,.55)}
+.k:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.sbtn{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px}
+.sbtn button{min-height:44px;border-radius:8px;border:1px solid #3a3e45;background:transparent;color:#cfd3d8;padding:0 14px;cursor:pointer;font-size:14px}
+/* Lexikon */
+.lex{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:10px;margin-top:12px}
+.lex div{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px}
+.lex .kb{margin-bottom:6px}
+input[type=search],.modal input{font:inherit;font-size:16px;width:100%;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:0 12px}
+.quizq{font-size:20px;line-height:1.3;margin:8px 0 12px}
+.score{display:flex;gap:16px;font-size:15px;color:var(--mut)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;padding:16px;z-index:9}
+.modal.show{display:grid}.modal>div{background:var(--card);border-radius:14px;padding:20px;width:min(420px,100%)}
+.modal h3{margin:0 0 10px}.modal .row{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+.note{font-size:13px;color:var(--mut);margin-top:12px}
+.hide{display:none!important}
+.ma2box{border-left:4px solid #ffd400;background:color-mix(in srgb,#ffd400 12%,transparent);padding:8px 10px;border-radius:6px}
+.luaed{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--bg)}
+.lbar{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+.lbar button{flex:none;min-height:40px;min-width:40px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);font:600 14px 'JetBrains Mono',monospace;cursor:pointer}
+.edwrap{display:flex;border:1px solid #333;border-radius:8px;overflow:hidden;background:#0d0f12;height:280px}
+.gut{margin:0;padding:10px 6px;width:38px;flex:none;text-align:right;color:#5b6168;font:14px/1.5 'JetBrains Mono',monospace;overflow:hidden;background:#121417;user-select:none;-webkit-user-select:none}
+#luaCode{flex:1;border:0;outline:0;resize:none;background:transparent;color:#e8eaed;font:14px/1.5 'JetBrains Mono',monospace;padding:10px;white-space:pre;overflow:auto;tab-size:2;-webkit-user-select:text;user-select:text}
+@media(pointer:coarse){#luaCode,.gut{font-size:16px}}
+.mon{margin-top:8px;background:#0d0f12;border-radius:8px;padding:8px 10px;font:13px/1.45 'JetBrains Mono',monospace;color:#e8eaed;max-height:200px;min-height:70px;overflow-y:auto}
+.ml{white-space:pre-wrap;overflow-wrap:anywhere}.ml.m-feedback{color:#20d3e8}.ml.m-cmd{color:#8a929b}.ml.m-err{color:#ff6b6b;font-weight:700}.ml.m-info{color:#ffd400}.ml.m-msgbox{border:1px solid #ffd400;border-radius:6px;padding:4px 6px;margin:3px 0}
+.luatask{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--accink);background:color-mix(in srgb,var(--acc) 10%,transparent);font-size:15px}
+.luatask.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}.luatask.bad{border-color:var(--err);background:color-mix(in srgb,var(--err) 10%,transparent)}
+.ltext code{font:600 13px 'JetBrains Mono',monospace;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:1px 4px}
+.ltext pre,.cheat pre{background:#0d0f12;color:#e8eaed;border-radius:8px;padding:10px;font:13px/1.45 'JetBrains Mono',monospace;overflow-x:auto;white-space:pre}
+.cheat{margin-top:12px}.cheat summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+.enc{margin-top:8px;background:var(--desk2);border-radius:10px;padding:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.encl{display:flex;flex-wrap:wrap;gap:6px}
+.encl button{min-height:40px;padding:0 12px;border-radius:8px;border:1px solid #3a3e45;background:#2b2f35;color:#cfd3d8;font:600 13px Archivo,sans-serif;cursor:pointer}
+.encl button.on{background:#20d3e8;color:#000;border-color:#20d3e8}
+.encs{display:flex;flex-wrap:wrap;gap:10px;flex:1;justify-content:flex-end}
+.knob{display:flex;align-items:center;gap:6px;color:#e8eaed}
+.knob svg{width:54px;height:54px;touch-action:none;cursor:grab;flex:none}
+.knob .kv{display:flex;flex-direction:column;font:600 12px 'JetBrains Mono',monospace;min-width:70px}.knob .kv b{color:#9aa1a9;font:600 12px Archivo,sans-serif}
+.knob button{width:40px;height:40px;border-radius:8px;border:1px solid #3a3e45;background:#2b2f35;color:#fff;font-size:20px;cursor:pointer}
+.fxed{margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg)}
+.fxh{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:6px 0}
+.fxh input{flex:1;min-width:120px;font:inherit;font-size:16px;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 10px}
+.fxb{min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--card);padding:0 14px;cursor:pointer;font-weight:600}
+.pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.pool button{min-height:52px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:13px;line-height:1.2;padding:4px 6px;text-align:left}
+.pool button b{display:block;font:700 12px 'JetBrains Mono',monospace;color:var(--accink)}
+.pool button.on{border:2px solid var(--accink)}
+table.lines{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.lines th{text-align:left;font-weight:600;color:var(--mut);padding:4px 6px;border-bottom:1px solid var(--line)}
+.lines td{padding:8px 6px;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.lines tr.on td{background:color-mix(in srgb,var(--acc) 18%,transparent)}.lines tbody tr{cursor:pointer}
+#fxWave{display:block;width:100%;height:auto;background:#101215;border-radius:10px;margin:10px 0}
+.params{display:grid;gap:6px}
+.prm{display:grid;grid-template-columns:96px minmax(0,1fr) 62px;gap:8px;align-items:center;font-size:14px;border-radius:8px;padding:2px 4px}
+.prm label{font-weight:600;display:flex;align-items:center;gap:4px}
+.prm .q{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--card);font-size:13px;cursor:pointer;flex:none}
+.prm output{font:600 13px 'JetBrains Mono',monospace;text-align:right;white-space:nowrap}
+.prm input[type=range]{width:100%;height:32px;accent-color:#20d3e8}
+.prm select{min-height:40px;font-size:15px}
+.fxinfo{margin-top:8px;font-size:14px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.storeas{display:flex;align-items:center;gap:6px;font-size:14px}.storeas input{width:70px;flex:none;min-width:0}
+.pointc{outline:3px solid #ffd400!important;outline-offset:2px;animation:pc 1s ease-in-out infinite}
+@keyframes pc{50%{box-shadow:0 0 18px #ffd400}}
+main.wide{grid-template-columns:minmax(0,440px) minmax(0,1fr)}main.wide .k{font-size:11px;padding:0 1px}
+@media(max-width:980px){main.wide{grid-template-columns:minmax(0,1fr)}}
+.helpfab{min-height:46px;padding:0 22px;border-radius:999px;border:0;background:#ffd400;color:#111;font:800 17px Archivo,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer}
+.helpbox{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top));z-index:8;width:min(560px,calc(100% - 24px));background:var(--card);color:var(--ink);border:2px solid #ffd400;border-radius:16px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.4);display:none;max-height:60vh;overflow-y:auto}
+.helpbox.show{display:block}.helpbox h3{margin:0 0 8px;font-size:19px}.helpbox p{margin:0 0 8px}
+.helpbox .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.helpbox .row button{min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);padding:0 14px;cursor:pointer;font-weight:600}
+.k.point{animation:point .8s ease-in-out infinite;outline:3px solid #ffd400;outline-offset:3px}
+@keyframes point{50%{transform:scale(1.12);box-shadow:0 0 22px #ffd400}}
+@media(prefers-reduced-motion:reduce){.k.point{animation:none}}
+@media(min-width:981px){.helpbox{left:calc(16px + env(safe-area-inset-left));transform:none;top:auto;bottom:calc(16px + env(safe-area-inset-bottom));width:min(400px,34vw);max-height:70vh}}
+.typerow{display:flex;gap:8px;margin-top:8px}.typerow input{flex:1;font:500 16px "JetBrains Mono",monospace;min-height:46px;border-radius:8px;border:1px solid #3a3e45;background:#0b0c0e;color:#f2f2f2;padding:0 12px;-webkit-user-select:text;user-select:text}.typerow input:focus{outline:2px solid #20d3e8}.typerow .big{background:#20d3e8;color:#000}
+@media(pointer:coarse){.k{min-height:54px;font-size:14px;border-radius:8px}.k.num{font-size:19px}.keys{gap:8px}.desk{gap:10px}nav button{min-height:46px}}
+@media(pointer:coarse) and (min-width:981px){main{grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:14px;padding:14px}.panel{padding:16px}h2{font-size:24px}.desk{grid-template-columns:repeat(3,minmax(0,1fr))}.beam{height:56px}.info{display:none}.kinfo{min-height:0}#left{max-height:calc(100vh - 100px);overflow-y:auto;-webkit-overflow-scrolling:touch;position:sticky;top:14px}}
+@media(pointer:coarse) and (max-width:980px){.desk{grid-template-columns:repeat(2,minmax(0,1fr))}.info{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:600px){.desk{grid-template-columns:minmax(0,1fr)!important}.info{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(pointer:coarse) and (min-width:981px){.sim{padding:10px}.stage{padding:6px 8px 8px}.lamp{width:min(24px,90%)}.fix .v{margin-top:2px}.sim>.note,.sim>.sbtn{display:none}header{padding:8px 14px}h1{font-size:19px}.k{font-size:12px}.kinfo{padding:6px 10px;font-size:13px}.taskbar{padding:8px 10px}.blk{padding:6px 6px 8px}.k{min-height:50px}}
+</style>
+</head>
+<body>
+<div id="jsfail" style="background:#c62828;color:#fff;padding:12px 16px;font-weight:600">Das Programm startet in dieser Ansicht nicht. Öffne den Link bitte direkt in Safari (Teilen → In Safari öffnen).</div>
+<header>
+  <h1>grandMA2 Trainer<small>v1.8 · iPad</small></h1>
+  <nav id="modes">
+    <button data-m="learn" aria-pressed="true">Lernen</button>
+    <button data-m="quiz" aria-pressed="false">Tasten-Quiz</button>
+    <button data-m="lex" aria-pressed="false">Tasten-Lexikon</button>
+    <button data-m="fx" aria-pressed="false">Effekt-Editor</button>
+    <button data-m="lua" aria-pressed="false">Lua für grandMA2</button>
+    <button data-m="free" aria-pressed="false">Freies Üben</button>
+  </nav>
+  <button class="helpfab" id="helpBtn" aria-haspopup="dialog">? Hilfe</button>
+  <div class="prog"><span id="progt">0 / 0 Lektionen</span><div class="bar"><i id="progb"></i></div></div>
+</header>
+
+<main>
+  <section class="panel" id="left">
+    <div id="learnPane">
+      <div class="lsel">
+        <button class="navb" id="prevL" aria-label="Vorherige Lektion">‹</button>
+        <select id="lessonSel" aria-label="Lektion wählen"></select>
+        <button class="navb" id="nextL" aria-label="Nächste Lektion">›</button>
+      </div>
+      <p class="stufe" id="lStufe"></p>
+      <h2 id="lTitle"></h2>
+      <div class="ltext" id="lText"></div>
+      <div class="illu hide" id="lIllu"></div>
+      <div id="lFx"></div>
+      <ol class="tasks" id="lTasks"></ol>
+      <div class="donebox" id="doneBox"><b>Lektion geschafft!</b> <span id="doneMsg"></span><div style="margin-top:10px"><button class="big" id="goNext">Nächste Lektion ›</button></div></div>
+    </div>
+    <div id="quizPane" class="hide">
+      <p class="stufe">Tasten-Quiz</p>
+      <h2>Finde die richtige Taste</h2>
+      <p>Lies die Frage und drück rechts auf der Konsole die passende Taste. So lernst du, wo jede Taste liegt und was sie macht.</p>
+      <div class="panel" style="padding:14px"><div class="quizq" id="quizQ"></div><div class="fb" id="quizFb" style="color:var(--mut)"></div></div>
+      <div class="score" style="margin-top:12px"><span>Richtig: <b id="qOk">0</b></span><span>Falsch: <b id="qBad">0</b></span><span>Serie: <b id="qStreak">0</b></span></div>
+      <div class="sbtn"><button class="big" id="quizSkip">Andere Frage</button></div>
+    </div>
+    <div id="lexPane" class="hide">
+      <p class="stufe">Nachschlagen</p>
+      <h2>Alle Tasten erklärt</h2>
+      <input type="search" id="lexQ" placeholder="Taste oder Begriff suchen …" aria-label="Taste suchen">
+      <div class="lex" id="lexList"></div>
+      <p class="note">PC-Tastatur im Simulator: Ziffern, Punkt, + und −, Enter = Please, Esc = Esc, Rücktaste = Oops, F = Fixture, G = Group, T = Thru, A = At, C = Cue, P = Preset, S = Store.</p>
+    </div>
+    <div id="fxPane" class="hide">
+      <p class="stufe">Nachbau der Effekt-Tabelle</p>
+      <h2>Effekt-Editor</h2>
+      <p style="margin:0 0 10px">Wähle Geräte aus (z. B. <span class="kb">Fixture</span> 1 <span class="kb">Thru</span> 12 <span class="kb">At</span> <span class="kb">Full</span>), lade einen Effekt aus dem Pool oder bau einen neuen und tipp auf ▶ Abspielen. Jede Änderung siehst du sofort auf der Bühne.</p>
+      <div id="fxSlot"></div>
+    </div>
+    <div id="luaPane" class="hide">
+      <div class="lsel"><button class="navb" id="luaPrev" aria-label="Vorherige Lua-Lektion">‹</button><select id="luaSel" aria-label="Lua-Lektion wählen"></select><button class="navb" id="luaNextL" aria-label="Nächste Lua-Lektion">›</button></div>
+      <p class="stufe" id="luaStufe"></p>
+      <h2 id="luaTitle"></h2>
+      <div class="ltext" id="luaText"></div>
+      <div class="luatask" id="luaTask"></div>
+      <div class="luaed">
+        <div class="lbar" id="luaBar"></div>
+        <div class="edwrap"><pre class="gut" id="luaGut" aria-hidden="true">1</pre><textarea id="luaCode" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" wrap="off" aria-label="Lua-Code"></textarea></div>
+        <div class="fxh"><button class="big" id="luaRun">▶ Ausführen</button><button class="fxb" id="luaReset">Startcode</button><button class="fxb" id="luaSolBtn">Lösung laden</button></div>
+        <div class="mon" id="luaMon" aria-live="polite"></div>
+      </div>
+      <details class="cheat"><summary>Spickzettel: grandMA2-Lua (gma-Befehle)</summary>
+        <pre>-- Lua
+local x = 5            Variable
+"Text " .. x           Text verbinden
+if a == b then … elseif … else … end
+for i = 1, 12 do … end
+for i, v in ipairs(t) do … end
+local t = {"4.1", "4.3"}   Tabelle, t[1], #t
+local function f(a, b) return a + b end
+-- gma (im Trainer nachgebaut)
+gma.cmd("Fixture 1 Thru 6 At 50")
+gma.cmd('Label Group 1 "Front"')
+gma.cmd("Store Cue 5 /o")   /o = überschreiben
+gma.cmd("ClearAll")
+gma.echo("…")      System Monitor
+gma.feedback("…")  Feedback-Zeile
+gma.sleep(0.5)     warten (Sekunden)
+gma.textinput("Titel", "Vorgabe")
+gma.gui.confirm("Titel", "Frage")
+gma.gui.msgbox("Titel", "Text")
+gma.show.getobj.handle("Group 1")
+gma.show.getobj.label(handle)
+gma.show.getvar("FADERPAGE")
+return Start          Plugin-Startfunktion</pre>
+        <p class="note">Der Trainer kennt nur einen Teil von Lua und vom gma-API. Was hier läuft, ist richtig aufgebaut. Auf der echten Konsole gibt es aber noch viel mehr Funktionen.</p>
+      </details>
+    </div>
+    <div id="freePane" class="hide">
+      <p class="stufe">Sandkasten</p>
+      <h2>Freies Üben</h2>
+      <div class="ltext">
+        <p>Hier gibt es keine Aufgaben. Probier alles aus, was du gelernt hast. Ein paar Ideen:</p>
+        <ul>
+          <li><span class="kb">Fixture</span> 1 <span class="kb">Thru</span> 12 <span class="kb">At</span> 0 <span class="kb">Thru</span> 100</li>
+          <li><span class="kb">Group</span> 2 <span class="kb">At</span> <span class="kb">Preset</span> 4.6</li>
+          <li><span class="kb">Store</span> <span class="kb">Cue</span> 7, danach <span class="kb">Goto</span> <span class="kb">Cue</span> 7</li>
+          <li><span class="kb">Macro</span> 1 bis 3</li>
+        </ul>
+        <p>Vorhanden sind Groups 1–3 (Alle, Gerade, Ungerade), Color-Presets 4.1–4.7, Effekte 1–7 und Makros 1–3.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sim" aria-label="grandMA2 Simulator">
+    <div class="stage">
+      <div class="truss"></div>
+      <div class="fx" id="stage"></div>
+      <div class="badges" id="badges"></div>
+    </div>
+    <div class="info">
+      <div><b>Sequenz 1 · Executor 1</b><span id="iExec"></span></div>
+      <div><b>Cues</b><span id="iCues"></span></div>
+      <div><b>Groups</b><span id="iGroups"></span></div>
+      <div><b>Presets (Typ.Nr)</b><span id="iPresets"></span></div>
+    </div>
+    <div class="taskbar" id="taskbar"></div>
+    <div class="cmd" id="cmd" aria-live="polite"></div>
+    <form id="typeForm" class="typerow" autocomplete="off"><input id="cmdIn" type="text" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="⌨ oder hier tippen, z. B. fixture 1 thru 6 at 50" aria-label="Befehl eintippen"><button class="big" type="submit">Please</button></form>
+    <div class="fb" id="fb">Bereit. Tipp eine Taste.</div>
+    <div class="enc" id="enc"><div class="encl" id="encLayers"></div><div class="encs" id="encKnobs"></div></div>
+    <div class="kinfo" id="kinfo">Jede Taste, die du drückst, wird hier erklärt.</div>
+    <div class="desk" id="desk"></div>
+    <div class="sbtn">
+      <button id="resetSim">Simulator zurücksetzen</button>
+      <button id="resetProg">Lernfortschritt löschen</button>
+    </div>
+    <p class="note" style="color:#9aa1a9">Schematische Konsole: Die Tasten sind nach Funktion gruppiert. Auf dem echten Pult (grandMA2 full / light / ultra-light / onPC) sitzen sie etwas anders. Gelb = Objekt-Tasten, Grün = Playback, Rot = Programmer-Modi.</p>
+  </section>
+</main>
+
+<div class="helpbox" id="helpBox" role="dialog" aria-labelledby="hTitle"><h3 id="hTitle">So geht's weiter</h3><div id="hBody"></div><div class="row"><button id="hShow">Taste zeigen</button><button id="hSol">Ganze Lösung zeigen</button><button id="hClose">Schließen</button></div></div>
+<div id="fxEd" class="fxed hide">
+  <div class="fxh"><b>Effekt-Pool</b><button class="fxb" data-act="new" data-ctl="new">+ Neuer Effekt</button></div>
+  <div class="pool" id="fxPool"></div>
+  <div class="fxh" style="margin-top:12px"><b>Bearbeiten:</b><input id="fxName" aria-label="Name des Effekts" maxlength="24"></div>
+  <div class="scroll"><table class="lines"><thead><tr><th>Zeile</th><th>Attribut</th><th>Form</th><th>Speed</th><th>Phase</th><th>Width</th></tr></thead><tbody id="fxLines"></tbody></table></div>
+  <div class="fxh"><button class="fxb" data-act="addline" data-ctl="addline">+ Zeile</button><button class="fxb" data-act="delline">− Zeile</button></div>
+  <svg id="fxWave" viewBox="0 0 400 140" role="img" aria-label="Kurve der gewählten Effekt-Zeile"></svg>
+  <div id="fxParams" class="params"></div>
+  <div class="fxinfo" id="fxInfo">Tipp auf ein <b>?</b>, um zu sehen, was ein Wert bewirkt.</div>
+  <div class="fxh fxfoot"><button class="big" data-act="play" data-ctl="play" id="fxPlay">▶ Abspielen</button>
+   <label class="storeas">Speichern als Effekt <input id="fxNum" type="number" min="1" max="99" inputmode="numeric"></label><button class="fxb" data-act="store" data-ctl="store">Speichern</button></div>
+  <p class="note">Vereinfachter Nachbau: Auf der echten grandMA2 hat eine Effekt-Zeile noch mehr Spalten (z. B. Attack, Decay, Interleave, Mode Abs/Rel), und die Namen der Formen können je nach Software-Version abweichen.</p>
+</div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div>
+    <h3 id="mTitle">Name eingeben</h3>
+    <p id="mText" style="margin:0 0 8px;color:var(--mut);font-size:14px"></p>
+    <input id="mInput" maxlength="24" aria-label="Name">
+    <div class="row"><button class="navb" id="mCancel" style="padding:0 14px">Abbrechen</button><button class="big" id="mOk">OK</button></div>
+  </div>
+</div>
+
+<script>
+/* MiniLua v1.0 – kleiner Lua-Interpreter (Teilmenge von Lua 5.1) für den grandMA2 Trainer */
+const MiniLua=(()=>{
+class LuaError extends Error{constructor(m,line){super(m);this.line=line}}
+class LuaTable{constructor(){this.h=new Map()}
+ get(k){if(typeof k==='number'&&Number.isInteger(k))return this.h.get(k);return this.h.get(k)}
+ set(k,v){if(k===undefined)throw new Error('Tabellen-Schlüssel darf nicht nil sein');if(v===undefined)this.h.delete(k);else this.h.set(k,v)}
+ len(){let n=0;while(this.h.has(n+1))n++;return n}}
+const KW=new Set('and break do else elseif end false for function if in local nil not or repeat return then true until while'.split(' '));
+/* ---------- Lexer ---------- */
+function lex(src){const T=[];let i=0,line=1;const n=src.length;
+ const err=m=>{throw new LuaError(m,line)};
+ const longBracket=()=>{let j=i+1,lvl=0;while(src[j]==='='){lvl++;j++}if(src[j]!=='[')return null;
+  const close=']'+'='.repeat(lvl)+']';const end=src.indexOf(close,j+1);if(end<0)err('Langer Text/Kommentar wird nicht geschlossen');
+  let s=src.slice(j+1,end);if(s[0]==='\n')s=s.slice(1);const txt=src.slice(i,end+close.length);line+=(txt.match(/\n/g)||[]).length;i=end+close.length;return s};
+ while(i<n){const c=src[i];
+  if(c==='\n'){line++;i++;continue}
+  if(/\s/.test(c)){i++;continue}
+  if(c==='-'&&src[i+1]==='-'){i+=2;if(src[i]==='['){const r=longBracket();if(r!==null)continue}while(i<n&&src[i]!=='\n')i++;continue}
+  if(/[A-Za-z_]/.test(c)){let j=i;while(j<n&&/[A-Za-z0-9_]/.test(src[j]))j++;const w=src.slice(i,j);T.push({t:KW.has(w)?'kw':'name',v:w,line});i=j;continue}
+  if(/[0-9]/.test(c)||(c==='.'&&/[0-9]/.test(src[i+1]||''))){let m=src.slice(i).match(/^0[xX][0-9a-fA-F]+/)||src.slice(i).match(/^(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?/);T.push({t:'num',v:Number(m[0]),line});i+=m[0].length;continue}
+  if(c==='"'||c==="'"){let j=i+1,s='';while(j<n&&src[j]!==c){if(src[j]==='\n')err('Text ohne schließendes Anführungszeichen');
+    if(src[j]==='\\'){j++;const e=src[j];s+=e==='n'?'\n':e==='t'?'\t':e==='\\'?'\\':e==='"'?'"':e==="'"?"'":e==='\n'?'\n':e;j++;continue}s+=src[j++]}
+   if(j>=n)err('Text ohne schließendes Anführungszeichen');T.push({t:'str',v:s,line});i=j+1;continue}
+  if(c==='['&&(src[i+1]==='['||src[i+1]==='=')){const r=longBracket();if(r!==null){T.push({t:'str',v:r,line});continue}}
+  const three=src.substr(i,3),two=src.substr(i,2);
+  if(three==='...'){T.push({t:'op',v:'...',line});i+=3;continue}
+  if(['..','==','~=','<=','>=','::'].includes(two)){T.push({t:'op',v:two,line});i+=2;continue}
+  if('+-*/%^#<>=(){}[];:,.'.includes(c)){T.push({t:'op',v:c,line});i++;continue}
+  if(c==='!'&&src[i+1]==='=')err('In Lua heißt „ungleich“ ~= und nicht !=');
+  err('Unbekanntes Zeichen „'+c+'“')}
+ T.push({t:'eof',v:'<Ende>',line});return T}
+/* ---------- Parser ---------- */
+const BIN={'or':[1,1],'and':[2,2],'<':[3,3],'>':[3,3],'<=':[3,3],'>=':[3,3],'~=':[3,3],'==':[3,3],'..':[9,8],'+':[10,10],'-':[10,10],'*':[11,11],'/':[11,11],'%':[11,11],'^':[14,13]};
+function parse(src){const T=lex(src);let p=0;
+ const peek=()=>T[p],next=()=>T[p++];
+ const is=(v,t)=>{const k=T[p];return k.v===v&&(t?k.t===t:(k.t==='op'||k.t==='kw'))};
+ const show=k=>k.t==='eof'?'Ende des Codes':k.t==='str'?'Text "'+k.v+'"':String(k.v);
+ const err=(m,k)=>{throw new LuaError(m,(k||T[p]).line)};
+ const expect=(v,what,open)=>{if(!is(v))err('„'+v+'“ erwartet'+(what?' '+what:'')+(open?' (für „'+open.v+'“ in Zeile '+open.line+')':'')+', gefunden: '+show(peek()));return next()};
+ const name=()=>{const k=peek();if(k.t!=='name')err('Name erwartet, gefunden: '+show(k));p++;return k.v};
+ function block(){const b=[];while(true){const k=peek();if(k.t==='eof'||(k.t==='kw'&&['end','else','elseif','until'].includes(k.v)))break;
+   if(k.t==='kw'&&k.v==='return'){next();const r={k:'return',e:[],line:k.line};if(!(peek().t==='eof'||(peek().t==='kw'&&['end','else','elseif','until'].includes(peek().v))||is(';')))r.e=explist();if(is(';'))next();b.push(r);break}
+   const s=stat();if(s)b.push(s)}return b}
+ function stat(){const k=peek(),line=k.line;
+  if(is(';'))return next(),null;
+  if(k.t==='kw')switch(k.v){
+   case'if':{next();const cl=[];let c=expr();expect('then',null,k);cl.push([c,block()]);let els=null;
+     while(true){if(is('elseif')){next();c=expr();expect('then');cl.push([c,block()])}else if(is('else')){next();els=block();expect('end',null,k);break}else{expect('end',null,k);break}}
+     return{k:'if',cl,els,line}}
+   case'while':{next();const c=expr();expect('do',null,k);const b=block();expect('end',null,k);return{k:'while',c,b,line}}
+   case'do':{next();const b=block();expect('end',null,k);return{k:'do',b,line}}
+   case'repeat':{next();const b=block();expect('until',null,k);return{k:'repeat',b,c:expr(),line}}
+   case'for':{next();const n1=name();
+     if(is('=')){next();const a=expr();expect(',','im for (for i = Start, Ende do)');const b=expr();let st=null;if(is(',')){next();st=expr()}expect('do',null,k);const bl=block();expect('end',null,k);return{k:'fornum',v:n1,a,b,st,bl,line}}
+     const names=[n1];while(is(',')){next();names.push(name())}expect('in','im for (z. B. for i, v in ipairs(t) do)');const el=explist();expect('do',null,k);const bl=block();expect('end',null,k);return{k:'forin',names,el,bl,line}}
+   case'function':{next();let n={k:'name',n:name(),line};let full=n.n,method=false;
+     while(is('.')){next();const f=name();full+='.'+f;n={k:'index',o:n,i:{k:'str',v:f},line}}
+     if(is(':')){next();const f=name();full+=':'+f;n={k:'index',o:n,i:{k:'str',v:f},line};method=true}
+     const fb=funcbody(k,full,method);return{k:'assign',t:[n],e:[fb],line}}
+   case'local':{next();if(is('function')){const fk=next();const nm=name();return{k:'localfunc',n:nm,f:funcbody(fk,nm),line}}
+     const names=[name()];while(is(',')){next();names.push(name())}let e=[];if(is('=')){next();e=explist()}return{k:'local',names,e,line}}
+   case'break':next();return{k:'break',line};
+  }
+  const e=suffixed();
+  if(is('=')||is(',')){const t=[e];while(is(',')){next();t.push(suffixed())}expect('=');
+   t.forEach(x=>{if(x.k!=='name'&&x.k!=='index')err('Hier kann nichts zugewiesen werden',k)});return{k:'assign',t,e:explist(),line}}
+  if(e.k!=='call')err(e.k==='name'?'„'+e.n+'“ steht allein da. Meintest du eine Zuweisung (=) oder einen Funktionsaufruf mit ()?':'Anweisung erwartet (Zuweisung oder Funktionsaufruf)',k);
+  return{k:'callstat',e,line}}
+ function funcbody(k,nm,method){expect('(');const params=method?['self']:[];let va=false;
+  if(!is(')')){do{if(is('...')){next();va=true;break}params.push(name())}while(is(',')&&next())}
+  expect(')');const b=block();expect('end',null,k);return{k:'func',params,va,b,name:nm,line:k.line}}
+ function explist(){const l=[expr()];while(is(',')){next();l.push(expr())}return l}
+ function expr(lim=0){let e;const k=peek();
+  if((k.t==='kw'&&k.v==='not')||(k.t==='op'&&(k.v==='-'||k.v==='#'))){next();e={k:'un',op:k.v,e:expr(12),line:k.line}}else e=simple();
+  while(true){const o=peek();if(!((o.t==='op'||o.t==='kw')&&BIN[o.v]))break;const [l,r]=BIN[o.v];if(l<=lim)break;next();e={k:'bin',op:o.v,a:e,b:expr(r),line:o.line}}
+  return e}
+ function simple(){const k=peek();
+  if(k.t==='num'){next();return{k:'num',v:k.v}}if(k.t==='str'){next();return{k:'str',v:k.v}}
+  if(k.t==='kw'){if(k.v==='nil'){next();return{k:'nil'}}if(k.v==='true'){next();return{k:'bool',v:true}}if(k.v==='false'){next();return{k:'bool',v:false}}
+   if(k.v==='function'){next();return funcbody(k,'anonym')}}
+  if(is('...')){next();return{k:'vararg',line:k.line}}
+  if(is('{'))return table();
+  return suffixed()}
+ function table(){const k=next(),f=[];
+  while(!is('}')){if(is('[')){next();const kk=expr();expect(']');expect('=');f.push({k:kk,v:expr()})}
+   else if(peek().t==='name'&&T[p+1].v==='='&&T[p+1].t==='op'){const n=name();next();f.push({k:{k:'str',v:n},v:expr()})}
+   else f.push({v:expr()});
+   if(is(',')||is(';'))next();else break}
+  expect('}',null,k);return{k:'table',f,line:k.line}}
+ function primary(){const k=peek();if(k.t==='name'){next();return{k:'name',n:k.v,line:k.line}}
+  if(is('(')){next();const e=expr();expect(')');return{k:'paren',e,line:k.line}}
+  err('Unerwartet: '+show(k))}
+ function suffixed(){let e=primary();
+  while(true){const k=peek();
+   if(is('.')){next();e={k:'index',o:e,i:{k:'str',v:name()},line:k.line}}
+   else if(is('[')){next();const i=expr();expect(']');e={k:'index',o:e,i,line:k.line}}
+   else if(is(':')){next();const m=name();e={k:'call',f:e,m,a:args(),line:k.line}}
+   else if(is('(')||k.t==='str'||is('{'))e={k:'call',f:e,a:args(),line:k.line};
+   else return e}}
+ function args(){const k=peek();if(k.t==='str'){next();return[{k:'str',v:k.v}]}if(is('{'))return[table()];
+  next();if(is(')')){next();return[]}const l=explist();expect(')','am Ende der Argumente',k);return l}
+ const b=block();if(peek().t!=='eof')err('Unerwartet: '+show(peek())+(peek().v==='end'?' (ein „end“ zu viel?)':''));return b}
+/* ---------- Interpreter ---------- */
+class Ret{constructor(v){this.v=v}}class Brk{}
+class Scope{constructor(par){this.v=new Map();this.p=par}
+ find(n){let s=this;while(s){if(s.v.has(n))return s;s=s.p}return null}}
+const isFn=v=>v&&(v.luaFn||typeof v==='function');
+function type(v){if(v===undefined||v===null)return'nil';if(typeof v==='boolean')return'boolean';if(typeof v==='number')return'number';if(typeof v==='string')return'string';if(v instanceof LuaTable)return'table';if(isFn(v))return'function';return'userdata'}
+function tostr(v){const t=type(v);if(t==='nil')return'nil';if(t==='number'){if(Number.isInteger(v)&&Math.abs(v)<1e15)return String(v);if(!isFinite(v))return v>0?'inf':v<0?'-inf':'nan';return String(Number(v.toPrecision(14)))}
+ if(t==='string')return v;if(t==='boolean')return String(v);if(t==='table')return'table: 0x'+(v.id||(v.id=(Math.random()*1e8|0).toString(16)));if(t==='function')return'function: 0x'+(v.id||(v.id=(Math.random()*1e8|0).toString(16)));return String(v)}
+const truthy=v=>v!==undefined&&v!==null&&v!==false;
+function run(src,env,opt){opt=opt||{};const maxSteps=opt.maxSteps||300000;let steps=0;const G=new Scope(null);
+ for(const k in env)G.v.set(k,env[k]);
+ const tick=line=>{if(++steps>maxSteps)throw new LuaError('Zu viele Schritte – hast du eine Endlosschleife gebaut?',line)};
+ const desc=e=>e.k==='name'?'„'+e.n+'“':e.k==='index'&&e.i.k==='str'?'„'+descPath(e)+'“':'';
+ const descPath=e=>e.k==='name'?e.n:e.k==='index'&&e.i.k==='str'?descPath(e.o)+'.'+e.i.v:'?';
+ const num=(v,e,line,what)=>{if(typeof v==='number')return v;if(typeof v==='string'&&v.trim()!==''&&!isNaN(Number(v)))return Number(v);
+  throw new LuaError('Versuch, mit '+(type(v)==='nil'?'nil':'einem '+type(v)+'-Wert')+' zu rechnen'+(desc(e)?' ('+desc(e)+' ist '+type(v)+')':''),line)};
+ function index(o,k,e,line){if(o instanceof LuaTable)return o.get(k);if(typeof o==='string'){const S=G.v.get('string');return S?S.get(k):undefined}
+  throw new LuaError('Versuch, '+(type(o)==='nil'?'nil':'einen '+type(o)+'-Wert')+' zu indizieren'+(desc(e)?' ('+desc(e)+' ist '+type(o)+')':''),line)}
+ function call(f,args,line,e){if(f&&f.luaFn)return f.luaFn(args,line);if(typeof f==='function'){const r=f(...args);return Array.isArray(r)?r:r===undefined?[]:[r]}
+  throw new LuaError('Versuch, '+(type(f)==='nil'?'nil':'einen '+type(f)+'-Wert')+' aufzurufen'+(e&&desc(e)?' ('+desc(e)+' gibt es nicht'+(e.k==='index'?' – Tippfehler?':'')+')':''),line)}
+ let depth=0;
+ function mkFunc(node,sc){const fn={luaFn:(args,line)=>{if(++depth>180){depth=0;throw new LuaError('Zu tiefe Rekursion (Funktion ruft sich endlos selbst auf?)',line)}
+   const s=new Scope(sc);node.params.forEach((p,i)=>s.v.set(p,args[i]));if(node.va)s.va=args.slice(node.params.length);
+   try{execBlock(node.b,s);return[]}catch(x){if(x instanceof Ret)return x.v;throw x}finally{depth--}},name:node.name};return fn}
+ function evalMulti(list,sc){const out=[];list.forEach((e,i)=>{if(i===list.length-1&&(e.k==='call'||e.k==='vararg'))out.push(...evalCallLike(e,sc));else out.push(ev(e,sc))});return out}
+ function evalCallLike(e,sc){if(e.k==='vararg'){let s=sc;while(s&&!s.va)s=s.p;return s?s.va:[]}
+  let f,args;if(e.m){const o=ev(e.f,sc);f=index(o,e.m,e.f,e.line);args=[o,...evalMulti(e.a,sc)];return call(f,args,e.line,{k:'index',o:e.f,i:{k:'str',v:e.m}})}
+  f=ev(e.f,sc);args=evalMulti(e.a,sc);return call(f,args,e.line,e.f)}
+ function ev(e,sc){switch(e.k){
+  case'num':case'str':case'bool':return e.v;case'nil':return undefined;
+  case'paren':return ev(e.e,sc);
+  case'vararg':case'call':return evalCallLike(e,sc)[0];
+  case'name':{const s=sc.find(e.n);return s?s.v.get(e.n):undefined}
+  case'index':{const o=ev(e.o,sc);return index(o,ev(e.i,sc),e.o,e.line)}
+  case'func':return mkFunc(e,sc);
+  case'table':{const t=new LuaTable();let n=1;e.f.forEach((f,i)=>{if(f.k)t.set(ev(f.k,sc),ev(f.v,sc));else if(i===e.f.length-1&&(f.v.k==='call'||f.v.k==='vararg'))evalCallLike(f.v,sc).forEach(v=>t.set(n++,v));else t.set(n++,ev(f.v,sc))});return t}
+  case'un':{const v=ev(e.e,sc);if(e.op==='not')return!truthy(v);if(e.op==='-')return-num(v,e.e,e.line);
+   if(typeof v==='string')return v.length;if(v instanceof LuaTable)return v.len();throw new LuaError('Länge (#) von '+type(v)+' geht nicht'+(desc(e.e)?' ('+desc(e.e)+')':''),e.line)}
+  case'bin':{const op=e.op;
+   if(op==='and'){const a=ev(e.a,sc);return truthy(a)?ev(e.b,sc):a}if(op==='or'){const a=ev(e.a,sc);return truthy(a)?a:ev(e.b,sc)}
+   const a=ev(e.a,sc),b=ev(e.b,sc);
+   switch(op){case'+':return num(a,e.a,e.line)+num(b,e.b,e.line);case'-':return num(a,e.a,e.line)-num(b,e.b,e.line);case'*':return num(a,e.a,e.line)*num(b,e.b,e.line);
+    case'/':return num(a,e.a,e.line)/num(b,e.b,e.line);case'%':{const x=num(a,e.a,e.line),y=num(b,e.b,e.line);return x-Math.floor(x/y)*y}case'^':return Math.pow(num(a,e.a,e.line),num(b,e.b,e.line));
+    case'..':{const ok=v=>typeof v==='string'||typeof v==='number';if(!ok(a)||!ok(b)){const bad=!ok(a)?[a,e.a]:[b,e.b];throw new LuaError('Versuch, '+(type(bad[0])==='nil'?'nil':'einen '+type(bad[0])+'-Wert')+' mit .. zu verbinden'+(desc(bad[1])?' ('+desc(bad[1])+' ist '+type(bad[0])+')':'')+'. Tipp: tostring() benutzen',e.line)}return tostr(a)+tostr(b)}
+    case'==':return a===b||(a===undefined&&b===null);case'~=':return!(a===b);
+    case'<':case'>':case'<=':case'>=':{if(!((typeof a==='number'&&typeof b==='number')||(typeof a==='string'&&typeof b==='string')))throw new LuaError('Vergleich von '+type(a)+' mit '+type(b)+' geht nicht',e.line);
+     return op==='<'?a<b:op==='>'?a>b:op==='<='?a<=b:a>=b}}}}
+  throw new LuaError('Unbekannter Ausdruck',e.line)}
+ function assignTo(t,v,sc){if(t.k==='name'){const s=sc.find(t.n)||G;s.v.set(t.n,v)}else{const o=ev(t.o,sc);if(!(o instanceof LuaTable))throw new LuaError('Versuch, in '+type(o)+' etwas abzulegen'+(desc(t.o)?' ('+desc(t.o)+' ist '+type(o)+')':''),t.line);o.set(ev(t.i,sc),v)}}
+ function execBlock(b,sc){for(const s of b)exec(s,sc)}
+ function exec(s,sc){tick(s.line);switch(s.k){
+  case'local':{const v=evalMulti(s.e,sc);s.names.forEach((n,i)=>sc.v.set(n,v[i]));return}
+  case'localfunc':{sc.v.set(s.n,undefined);sc.v.set(s.n,mkFunc(s.f,sc));return}
+  case'assign':{const v=evalMulti(s.e,sc);s.t.forEach((t,i)=>assignTo(t,v[i],sc));return}
+  case'callstat':evalCallLike(s.e,sc);return;
+  case'do':execBlock(s.b,new Scope(sc));return;
+  case'if':{for(const [c,b] of s.cl)if(truthy(ev(c,sc))){execBlock(b,new Scope(sc));return}if(s.els)execBlock(s.els,new Scope(sc));return}
+  case'while':try{while(truthy(ev(s.c,sc))){tick(s.line);execBlock(s.b,new Scope(sc))}}catch(x){if(!(x instanceof Brk))throw x}return;
+  case'repeat':try{while(true){tick(s.line);const i=new Scope(sc);execBlock(s.b,i);if(truthy(ev(s.c,i)))break}}catch(x){if(!(x instanceof Brk))throw x}return;
+  case'fornum':{const a=num(ev(s.a,sc),s.a,s.line),b=num(ev(s.b,sc),s.b,s.line),st=s.st?num(ev(s.st,sc),s.st,s.line):1;if(st===0)throw new LuaError('for-Schritt darf nicht 0 sein',s.line);
+   try{for(let i=a;st>0?i<=b:i>=b;i+=st){tick(s.line);const l=new Scope(sc);l.v.set(s.v,i);execBlock(s.bl,l)}}catch(x){if(!(x instanceof Brk))throw x}return}
+  case'forin':{const [f,st,init]=evalMulti(s.el,sc);let ctl=init;
+   try{while(true){tick(s.line);const r=call(f,[st,ctl],s.line,s.el[0]);if(r[0]===undefined||r[0]===null)break;ctl=r[0];const l=new Scope(sc);s.names.forEach((n,i)=>l.v.set(n,r[i]));execBlock(s.bl,l)}}catch(x){if(!(x instanceof Brk))throw x}return}
+  case'break':throw new Brk();
+  case'return':throw new Ret(evalMulti(s.e,sc));}}
+ const ast=parse(src);
+ try{execBlock(ast,G);return[]}catch(x){if(x instanceof Ret)return x.v;if(x instanceof Brk)throw new LuaError('„break“ außerhalb einer Schleife',0);throw x}}
+/* ---------- Standardbibliothek ---------- */
+function stdlib(print){const T=o=>{const t=new LuaTable();for(const k in o)t.set(k,o[k]);return t};
+ const fmt=(f,...a)=>{let i=0;return String(f).replace(/%([-0 ]*)(\d*)(?:\.(\d+))?([diouxXfFeEgGsqc%])/g,(m,fl,w,pr,c)=>{if(c==='%')return'%';let v=a[i++],s;
+   switch(c){case'd':case'i':s=String(Math.trunc(Number(v)));break;case'f':case'F':s=Number(v).toFixed(pr!==undefined?+pr:6);break;case'x':s=Math.trunc(Number(v)).toString(16);break;case'X':s=Math.trunc(Number(v)).toString(16).toUpperCase();break;
+    case'q':s='"'+tostr(v)+'"';break;case'c':s=String.fromCharCode(v);break;default:s=tostr(v);if(pr!==undefined)s=s.slice(0,+pr)}
+   if(w&&s.length<+w)s=fl.includes('-')?s.padEnd(+w):s.padStart(+w,fl.includes('0')?'0':' ');return s})};
+ const ipairsIter=(t,i)=>{i=i+1;const v=t.get(i);return v===undefined?[]:[i,v]};
+ const nextF=(t,k)=>{const keys=[...t.h.keys()];const i=k===undefined?0:keys.indexOf(k)+1;if(i>=keys.length)return[];return[keys[i],t.h.get(keys[i])]};
+ const str=T({format:fmt,upper:s=>String(s).toUpperCase(),lower:s=>String(s).toLowerCase(),len:s=>String(s).length,rep:(s,n,sep)=>Array(Math.max(0,n|0)).fill(String(s)).join(sep||''),
+  sub:(s,i,j)=>{s=String(s);const L=s.length;i=i===undefined?1:i;j=j===undefined?-1:j;if(i<0)i=L+i+1;if(j<0)j=L+j+1;i=Math.max(i,1);j=Math.min(j,L);return i>j?'':s.slice(i-1,j)},
+  find:(s,p,init)=>{const i=String(s).indexOf(String(p),(init||1)-1);return i<0?undefined:[i+1,i+String(p).length]},
+  reverse:s=>[...String(s)].reverse().join(''),byte:(s,i)=>String(s).charCodeAt((i||1)-1),char:(...c)=>String.fromCharCode(...c)});
+ return{print:(...a)=>{print(a.map(tostr).join('\t'))},tostring:v=>tostr(v),tonumber:(v,b)=>{if(typeof v==='number')return v;if(b){const n=parseInt(v,b);return isNaN(n)?undefined:n}const n=Number(String(v).trim());return String(v).trim()===''||isNaN(n)?undefined:n},
+  type:v=>type(v),ipairs:t=>{if(!(t instanceof LuaTable))throw new LuaError('ipairs braucht eine Tabelle, bekommen: '+type(t),0);return[ipairsIter,t,0]},
+  pairs:t=>{if(!(t instanceof LuaTable))throw new LuaError('pairs braucht eine Tabelle, bekommen: '+type(t),0);return[nextF,t,undefined]},next:nextF,
+  error:m=>{throw new LuaError(tostr(m),0)},assert:(v,m)=>{if(!truthy(v))throw new LuaError(m===undefined?'assertion failed!':tostr(m),0);return v},
+  select:(n,...a)=>n==='#'?a.length:a.slice(n-1),unpack:t=>{const r=[];for(let i=1;i<=t.len();i++)r.push(t.get(i));return r},
+  string:str,
+  math:T({floor:Math.floor,ceil:Math.ceil,abs:Math.abs,max:Math.max,min:Math.min,sqrt:Math.sqrt,sin:Math.sin,cos:Math.cos,pi:Math.PI,huge:Infinity,
+   random:(a,b)=>a===undefined?Math.random():b===undefined?1+Math.floor(Math.random()*a):a+Math.floor(Math.random()*(b-a+1)),randomseed:()=>{},fmod:(a,b)=>a%b}),
+  table:T({insert:(t,a,b)=>{if(b===undefined){t.set(t.len()+1,a)}else{const n=t.len();for(let i=n;i>=a;i--)t.set(i+1,t.get(i));t.set(a,b)}},
+   remove:(t,p)=>{const n=t.len();p=p===undefined?n:p;const v=t.get(p);for(let i=p;i<n;i++)t.set(i,t.get(i+1));t.set(n,undefined);return v},
+   concat:(t,sep,i,j)=>{const r=[];for(let k=i||1;k<=(j||t.len());k++)r.push(tostr(t.get(k)));return r.join(sep===undefined?'':sep)},
+   sort:(t,cmp)=>{const a=[];for(let i=1;i<=t.len();i++)a.push(t.get(i));a.sort((x,y)=>cmp?(cmp.luaFn?cmp.luaFn([x,y])[0]:cmp(x,y))?-1:1:(x<y?-1:x>y?1:0));a.forEach((v,i)=>t.set(i+1,v))}}),
+  os:T({time:()=>Math.floor(Date.now()/1000),date:f=>new Date().toLocaleString('de-DE'),clock:()=>performance.now()/1000})}}
+return{run,parse,lex,LuaTable,LuaError,stdlib,tostr,type,truthy}})();
+
+
+</script>
+<script>
+{
+/* ================= TASTEN ================= */
+const BLOCKS=[
+ {n:'Objekte',k:['Channel','Fixture','Group','Preset','Sequ','Cue','Exec','Effect','Macro','Page','Time']},
+ {n:'Funktionen',k:['Store','Update','Edit','Delete','Copy','Move','Assign','Label','Oops','Esc']},
+ {n:'Ziffernblock',k:['7','8','9','+','4','5','6','Thru','1','2','3','-','0','.','If','At','Clear','Full','Please']},
+ {n:'Playback',k:['Go-','Pause','Go+','Goto','Top','Off','On','Temp','Select','Fix','Learn']},
+ {n:'Programmer-Modi',k:['Highlt','Solo','Blind','Prvw','Freeze','Align','Prev','Next','Set','MA']},
+ {n:'System',k:['Backup','Setup','Tools','Help','List','View']}
+];
+const OBJ=['Channel','Fixture','Group','Preset','Sequ','Cue','Exec','Effect','Macro','Page','View','Time'];
+const PB=['Go-','Pause','Go+','Goto','Top','Off','On','Temp','Select','Fix','Learn'];
+const MODE=['Highlt','Solo','Blind','Prvw','Freeze'];
+const TOK={Sequ:'Sequence',Exec:'Executor'};
+const D={
+Backup:'Öffnet das Backup-Menü: Show speichern, laden, neue Show anlegen. Zweimal drücken speichert die Show schnell (Quick Save). Gewöhn dir an, oft zu speichern!',
+Setup:'Öffnet das Setup: Patch (Geräte anlegen), Konsolen- und Netzwerkeinstellungen, Benutzer-Profile.',
+Tools:'Öffnet das Tools-Menü mit Zusatzfunktionen der Konsole (je nach Software-Version unterschiedlich).',
+Help:'Hilfe. Drück Help und danach eine andere Taste: Du bekommst die Erklärung zu dieser Taste. Im Simulator genauso.',
+List:'Listet Objekte in der Command Line auf, z. B. welche Cues oder Groups es gibt.',
+View:'Objekt-Taste für Views (gespeicherte Bildschirm-Layouts). Store View 1 speichert die aktuelle Fensteranordnung, View 1 ruft sie wieder auf.',
+Highlt:'Highlight: Die ausgewählten Scheinwerfer gehen auf helle, offene Werte, damit du sie beim Einleuchten sofort siehst. Mit Prev/Next einzeln durchsteppen. Nochmal drücken = aus.',
+Solo:'Nur die ausgewählten Scheinwerfer leuchten, alle anderen werden dunkel. Ideal zum Fehlersuchen. Nochmal drücken = aus.',
+Blind:'Blind-Modus: Der Programmer wird nicht ausgegeben. Du programmierst im Hintergrund, während die Bühne unverändert bleibt. Nochmal drücken = aus.',
+Prvw:'Preview: Cues und Executors in den Vorschaufenstern ansehen und durchsteppen, ohne dass etwas auf die Bühne geht.',
+Freeze:'Friert die komplette Ausgabe ein. Änderungen sieht man erst wieder, wenn Freeze aus ist. Nochmal drücken = aus.',
+Align:'Fächert Werte beim Drehen der Encoder über die Auswahl auf. Mehrfaches Drücken wechselt den Modus (z. B. von links nach rechts, zur Mitte hin, nach außen).',
+Prev:'Geht in der aktuellen Auswahl einen Scheinwerfer zurück, damit du Gerät für Gerät einleuchten kannst. Blättert in Listen nach oben.',
+Next:'Geht in der aktuellen Auswahl zum nächsten Scheinwerfer, ideal zusammen mit Highlt. Blättert in Listen nach unten.',
+Set:'Öffnet die Eingabe für einen Wert, z. B. für den markierten Encoder oder ein Feld in einem Fenster.',
+MA:'Die "Shift-Taste" der grandMA2. Gedrückt halten und eine andere Taste drücken ruft deren Zweitfunktion auf. Die Kombinationen stehen im Handbuch.',
+'Go-':'Geht in der Sequenz einen Cue zurück (Go Back). Ohne Command Line wirkt die Taste auf den ausgewählten Executor.',
+Pause:'Hält den laufenden Fade bzw. die Sequenz an. Go+ setzt sie fort.',
+'Go+':'Startet den nächsten Cue (das "GO"). Ohne Command Line wirkt die Taste auf den ausgewählten Executor, sonst z. B. Go+ Executor 1.',
+Goto:'Springt direkt zu einem Cue: Goto Cue 5 Please.',
+Top:'Springt in der Sequenz an den Anfang (zum ersten Cue).',
+Off:'Schaltet etwas aus: Off Executor 1 schaltet die Sequenz auf Executor 1 aus.',
+On:'Schaltet etwas ein: On Executor 1 startet die Sequenz auf Executor 1.',
+Temp:'Temp: Ein Executor ist nur aktiv, solange seine Taste gedrückt wird (Flash ohne Fader-Mitnahme).',
+Select:'Macht einen Executor zum "ausgewählten" (Selected Executor). Auf ihn wirken dann die großen Go-Tasten.',
+Fix:'Fixiert einen Executor, damit er beim Seitenwechsel (Page) an seinem Platz bleibt.',
+Learn:'Tempo eintippen: Learn im Takt drücken, damit Chaser oder Effekte die Geschwindigkeit übernehmen.',
+Channel:'Objekt-Taste für Channel-IDs (klassische Dimmer-Kanäle). Channel 5 wählt Kanal 5.',
+Fixture:'Objekt-Taste für Fixture-IDs (Moving Heads, LED-Geräte …). Fixture 1 Thru 10 wählt die Geräte 1 bis 10.',
+Group:'Objekt-Taste für Gruppen. Store Group 1 speichert die Auswahl, Group 1 ruft sie wieder auf.',
+Preset:'Objekt-Taste für Presets, Schreibweise Typ.Nummer: Preset 4.1 = Farb-Preset 1. Typen: 1 Dimmer, 2 Position, 3 Gobo, 4 Color, 5 Beam, 6 Focus, 7 Control, 8 Shapers, 9 Video.',
+Sequ:'Objekt-Taste für Sequenzen (Cue-Listen). Erscheint in der Command Line als "Sequence".',
+Cue:'Objekt-Taste für Cues (Lichtstimmungen in einer Sequenz). Store Cue 1, Goto Cue 1, Delete Cue 1 …',
+Exec:'Objekt-Taste für Executors (Fader und Tasten, auf denen Sequenzen liegen). Erscheint als "Executor".',
+Effect:'Objekt-Taste für Effekte. Mit einer Auswahl ruft Effect 1 den Effekt 1 auf diese Geräte ab.',
+Macro:'Objekt-Taste für Makros (gespeicherte Befehlsketten). Macro 1 Please startet Makro 1.',
+Page:'Wechselt die Executor-Seite: Page 2 zeigt die Fader-Belegung von Seite 2.',
+Time:'Zeiten: setzt Fade- und Delay-Zeiten. Mehrfaches Drücken wechselt die Zeitart. Cue-Zeiten bearbeitest du am bequemsten im Sequenz-Fenster.',
+Store:'Speichert: Store Cue 1, Store Group 2, Store Preset 4.1 … Ist das Ziel schon belegt, fragt die Konsole nach Overwrite, Merge oder Remove. Store allein speichert den nächsten Cue.',
+Update:'Aktualisiert das, was gerade aktiv ist (laufender Cue, verwendete Presets), mit den Programmer-Werten. Update Please bzw. Update Cue 2.',
+Edit:'Öffnet ein Objekt zum Bearbeiten: Edit Cue 3 öffnet den Cue im Editor.',
+Delete:'Löscht: Delete Cue 3, Delete Group 2 … (oft mit Sicherheitsabfrage).',
+Copy:'Kopiert: Copy Cue 1 At 5 kopiert Cue 1 auf Cue 5.',
+Move:'Verschiebt: Move Cue 5 At 10 verschiebt Cue 5 auf Platz 10.',
+Assign:'Weist zu: Assign Sequence 1 At Executor 1 legt Sequenz 1 auf Executor 1. Auch für Funktionen und Eigenschaften.',
+Label:'Benennt ein Objekt: Label Group 1 öffnet ein Fenster für den Namen.',
+Oops:'Rückgängig. Steht etwas in der Command Line, löscht Oops das letzte Wort. Ist sie leer, macht Oops den letzten Befehl rückgängig (Undo).',
+Esc:'Löscht die ganze Command Line und schließt Pop-up-Fenster.',
+'+':'Fügt zur Auswahl hinzu (Fixture 1 + 3) oder erhöht relativ (At + 10).',
+'-':'Entfernt aus der Auswahl (Fixture 1 Thru 10 - 5) oder senkt relativ (At - 10).',
+Thru:'Bereich: Fixture 1 Thru 10. Fixture 5 Thru = von 5 bis zum letzten. Bei Werten: At 0 Thru 100 fächert die Werte auf.',
+If:'Filter: Von einer Auswahl bleibt nur, was auch im If-Teil steckt, z. B. Group 2 If Fixture 1 Thru 6.',
+At:'Weist einen Wert zu: Fixture 1 At 50 = Gerät 1 auf 50 %. Auch At Preset 4.1, At Full, At + 10.',
+Clear:'Steht etwas in der Command Line, wird sie geleert. Sonst: 1× Auswahl aufheben, 2× aktive Werte deaktivieren, 3× Programmer komplett leeren.',
+Full:'Schreibt "At Full" (100 %) in die Command Line.',
+Please:'Die Enter-Taste der grandMA2. Erst Please führt den Befehl in der Command Line aus.',
+'.':'Punkt, z. B. für Presets (Preset 4.1) oder Cue-Nummern (Cue 1.5).'
+};
+for(let i=0;i<10;i++)D[i]='Zifferntaste '+i+'. Zahlen für IDs, Werte und Nummern.';
+const ALLKEYS=BLOCKS.flatMap(b=>b.k);
+
+/* ================= ZEICHNUNGEN ================= */
+const svgConsole=()=>`<svg viewBox="0 0 600 300" role="img" aria-label="Aufbau einer grandMA2 full-size">
+<rect x="5" y="5" width="590" height="290" rx="14" fill="#2b2f35"/>
+${[0,1,2].map(i=>`<rect x="${20+i*120}" y="18" width="110" height="70" rx="4" fill="#0e1418" stroke="#20d3e8" stroke-opacity=".5"/>`).join('')}
+<rect x="390" y="18" width="190" height="70" rx="4" fill="#0e1418" stroke="#20d3e8" stroke-opacity=".5"/>
+${Array.from({length:9},(_,i)=>`<circle cx="${40+i*38}" cy="112" r="10" fill="#555" stroke="#777"/>`).join('')}
+${Array.from({length:15},(_,i)=>`<rect x="${22+i*22}" y="190" width="6" height="70" rx="3" fill="#111"/><rect x="${17+i*22}" y="${205+(i*13)%40}" width="16" height="10" rx="2" fill="#aaa"/><rect x="${16+i*22}" y="146" width="18" height="12" rx="2" fill="#555"/><rect x="${16+i*22}" y="164" width="18" height="12" rx="2" fill="#555"/>`).join('')}
+${Array.from({length:30},(_,i)=>`<rect x="${400+(i%6)*30}" y="${110+Math.floor(i/6)*30}" width="24" height="22" rx="3" fill="#4a4f57"/>`).join('')}
+<rect x="370" y="110" width="12" height="150" rx="3" fill="#111"/><rect x="364" y="140" width="24" height="12" rx="2" fill="#ff4d4d"/>
+<g font-family="Archivo,sans-serif" font-size="13" font-weight="700" fill="#fff">
+<circle cx="75" cy="52" r="13" fill="#20d3e8"/><text x="75" y="57" text-anchor="middle" fill="#000">1</text>
+<circle cx="380" cy="112" r="0"/>
+<circle cx="200" cy="112" r="13" fill="#20d3e8"/><text x="200" y="117" text-anchor="middle" fill="#000">2</text>
+<circle cx="180" cy="280" r="13" fill="#20d3e8"/><text x="180" y="285" text-anchor="middle" fill="#000">3</text>
+<circle cx="490" cy="280" r="13" fill="#20d3e8"/><text x="490" y="285" text-anchor="middle" fill="#000">4</text>
+<circle cx="485" cy="52" r="13" fill="#20d3e8"/><text x="485" y="57" text-anchor="middle" fill="#000">5</text>
+<circle cx="376" cy="280" r="13" fill="#20d3e8"/><text x="376" y="285" text-anchor="middle" fill="#000">6</text>
+</g></svg>`;
+const svgSel=(ids,title)=>`<svg viewBox="0 0 600 120" role="img" aria-label="${title}">
+<text x="300" y="22" fill="#e8eaed" font-family="JetBrains Mono,monospace" font-size="15" text-anchor="middle">${title}</text>
+${Array.from({length:12},(_,i)=>{const on=ids.includes(i+1);return `<rect x="${12+i*48.5}" y="40" width="42" height="42" rx="8" fill="${on?'#ffd400':'#2b2f35'}" stroke="#555"/><text x="${33+i*48.5}" y="67" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" font-weight="700" fill="${on?'#000':'#888'}">${i+1}</text>`}).join('')}
+<text x="300" y="108" fill="#9aa1a9" font-family="Archivo,sans-serif" font-size="13" text-anchor="middle">gelb = ausgewählt</text></svg>`;
+const svgFan=()=>`<svg viewBox="0 0 600 150" role="img" aria-label="Werte auffächern">
+<text x="300" y="20" fill="#e8eaed" font-family="JetBrains Mono,monospace" font-size="15" text-anchor="middle">Fixture 1 Thru 12 At 0 Thru 100</text>
+${Array.from({length:12},(_,i)=>{const v=Math.round(i*100/11),h=v*0.95;return `<rect x="${14+i*48.5}" y="${130-h}" width="38" height="${h+1}" rx="3" fill="#20d3e8" opacity="${.35+v/160}"/><text x="${33+i*48.5}" y="145" font-size="11" fill="#9aa1a9" text-anchor="middle" font-family="JetBrains Mono,monospace">${v}</text>`}).join('')}</svg>`;
+const svgClear=()=>`<svg viewBox="0 0 600 150" role="img" aria-label="Clear in drei Stufen">
+${[['1× Clear','Auswahl weg','Werte bleiben'],['2× Clear','Werte inaktiv','grau statt rot'],['3× Clear','Programmer leer','alles weg']].map((t,i)=>`<rect x="${14+i*198}" y="16" width="176" height="118" rx="12" fill="#2b2f35" stroke="${['#ffd400','#888','#ff4d4d'][i]}" stroke-width="2"/><text x="${102+i*198}" y="52" text-anchor="middle" font-family="JetBrains Mono,monospace" font-weight="700" font-size="17" fill="#fff">${t[0]}</text><text x="${102+i*198}" y="84" text-anchor="middle" font-family="Archivo,sans-serif" font-size="15" fill="#e8eaed">${t[1]}</text><text x="${102+i*198}" y="108" text-anchor="middle" font-family="Archivo,sans-serif" font-size="13" fill="#9aa1a9">${t[2]}</text>`).join('')}</svg>`;
+const svgWave=()=>{const X=x=>20+x*560,Y=v=>120-v*90;let d='';for(let i=0;i<=100;i++){const x=i/100;d+=(i?'L':'M')+X(x)+' '+Y(.5-.5*Math.cos(2*Math.PI*x))}
+ const dots=[0,1,2,3].map(i=>{const x=i/4,v=.5-.5*Math.cos(2*Math.PI*x);return`<circle cx="${X(x)}" cy="${Y(v)}" r="11" fill="#ffd400"/><text x="${X(x)}" y="${Y(v)+5}" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" font-weight="700">${i+1}</text>`}).join('');
+ return`<svg viewBox="0 0 600 170" role="img" aria-label="Sinus-Effekt mit Phase 0 bis 360 über 4 Geräte"><line x1="20" x2="580" y1="30" y2="30" stroke="#444"/><line x1="20" x2="580" y1="120" y2="120" stroke="#444"/><text x="24" y="24" fill="#9aa1a9" font-size="13" font-family="Archivo,sans-serif">High</text><text x="24" y="138" fill="#9aa1a9" font-size="13" font-family="Archivo,sans-serif">Low</text><path d="${d}" fill="none" stroke="#20d3e8" stroke-width="3"/>${dots}<text x="300" y="162" text-anchor="middle" fill="#e8eaed" font-size="14" font-family="JetBrains Mono,monospace">Form Sinus · Phase 0 bis 360 → 4 Geräte je 90° versetzt</text></svg>`};
+const PTYPES=[['1','Dimmer','#ffffff'],['2','Position','#20d3e8'],['3','Gobo','#b388ff'],['4','Color','#ff4d4d'],['5','Beam','#ffd400'],['6','Focus','#8ef0a8'],['7','Control','#999'],['8','Shapers','#ff9d5c'],['9','Video','#5c9dff']];
+const svgPresets=()=>`<svg viewBox="0 0 600 150" role="img" aria-label="Preset-Typen">
+${PTYPES.map((p,i)=>`<rect x="${10+i*65.5}" y="16" width="58" height="90" rx="8" fill="#2b2f35" stroke="${p[2]}" stroke-width="2"/><text x="${39+i*65.5}" y="58" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="24" font-weight="700" fill="${p[2]}">${p[0]}</text><text x="${39+i*65.5}" y="88" text-anchor="middle" font-family="Archivo,sans-serif" font-size="11" fill="#e8eaed">${p[1]}</text>`).join('')}
+<text x="300" y="136" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="15" fill="#e8eaed">Preset 4.1 = Typ 4 (Color), Nummer 1</text></svg>`;
+const svgSeq=()=>`<svg viewBox="0 0 600 190" role="img" aria-label="Cues, Sequenz und Executor">
+<rect x="14" y="14" width="300" height="160" rx="10" fill="#2b2f35"/>
+<text x="30" y="40" font-family="Archivo,sans-serif" font-weight="700" font-size="15" fill="#fff">Sequenz 1 (Cue-Liste)</text>
+${['Cue 1  Vorstellung','Cue 2  Song 1','Cue 3  Blackout'].map((t,i)=>`<rect x="30" y="${54+i*36}" width="268" height="28" rx="5" fill="${i==1?'#1f5f3a':'#3a3e45'}"/><text x="42" y="${73+i*36}" font-family="JetBrains Mono,monospace" font-size="14" fill="#fff">${t}</text>`).join('')}
+<path d="M320 94 H395" stroke="#20d3e8" stroke-width="3" marker-end="url(#ar)"/>
+<defs><marker id="ar" markerWidth="10" markerHeight="10" refX="6" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#20d3e8"/></marker></defs>
+<text x="357" y="84" text-anchor="middle" font-family="Archivo,sans-serif" font-size="12" fill="#9aa1a9">Assign</text>
+<rect x="410" y="14" width="170" height="160" rx="10" fill="#2b2f35"/>
+<text x="495" y="40" text-anchor="middle" font-family="Archivo,sans-serif" font-weight="700" font-size="15" fill="#fff">Executor 1</text>
+<rect x="489" y="54" width="12" height="80" rx="4" fill="#111"/><rect x="476" y="70" width="38" height="16" rx="3" fill="#ccc"/>
+<rect x="440" y="142" width="40" height="22" rx="4" fill="#4a4f57"/><text x="460" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#8ef0a8">Go+</text>
+<rect x="510" y="142" width="40" height="22" rx="4" fill="#4a4f57"/><text x="530" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#8ef0a8">Off</text></svg>`;
+const svgSyntax=()=>`<svg viewBox="0 0 600 120" role="img" aria-label="Befehls-Satzbau">
+${[['Fixture 1','WAS','#ffe066'],['At','FUNKTION','#20d3e8'],['50','WERT / ZIEL','#fff'],['Please','AUSFÜHREN','#8ef0a8']].map((t,i)=>`<rect x="${10+i*148}" y="14" width="136" height="56" rx="10" fill="#2b2f35" stroke="${t[2]}" stroke-width="2"/><text x="${78+i*148}" y="50" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="19" font-weight="700" fill="${t[2]}">${t[0]}</text><text x="${78+i*148}" y="96" text-anchor="middle" font-family="Archivo,sans-serif" font-size="13" fill="#9aa1a9">${t[1]}</text>`).join('')}</svg>`;
+
+/* ================= LEKTIONEN ================= */
+const C=(e,t,h)=>({type:'cmd',expect:Array.isArray(e)?e:[e],text:t,hint:h});
+const F=(k,t)=>({type:'find',key:k,text:t||`Finde die Taste [[${k}]].`});
+const P=(k,n,t)=>({type:'press',key:k,count:n||1,text:t});
+const X=(fn,t,ctl,help,sol)=>({type:'fx',check:fn,text:t,ctl,help,sol});
+const selAll=(k,fn)=>S.sel.length>0&&S.sel.every(f=>S.prog[f]&&S.prog[f][k]!=null&&fn(S.prog[f][k]));
+const near=(a,b,t)=>Math.abs(a-b)<=t;const colIs=(c,k)=>!!c&&c.toLowerCase()===COLS[k][1].toLowerCase();
+const allF=(n,fn)=>{const c=S.cues[n];return!!c&&range(1,N).every(f=>fn({...DEF,...(c.vals[f]||{})},f))};
+const cueFx=(n,fn)=>{const c=S.cues[n];return!!c&&(c.fx||[]).some(r=>r.inline.lines.some(fn))};
+const progClear=()=>!Object.values(S.prog).some(p=>!p.ina);
+const ln=(F,i)=>F.e&&F.e.lines[i||0]||{};
+const playing=()=>S.fxRun.some(r=>r.ref==='edit');
+const L=[
+{s:1,t:'Die Konsole im Überblick',illu:svgConsole,
+ x:`<p>Eine grandMA2 full-size hat sechs große Bereiche:</p><ul><li><b>① Touchscreens</b> für Fenster wie Fixture Sheet, Pools und Cue-Listen.</li><li><b>② Encoder</b> zum Drehen von Werten (Pan, Tilt, Farbe …).</li><li><b>③ Executor-Bereich</b>: Fader und Tasten, auf denen deine Cue-Listen liegen.</li><li><b>④ Command-Bereich</b>: die Tastatur. Fast alles kann man hier eintippen.</li><li><b>⑤ Command Line</b>: zeigt, was du gerade eintippst.</li><li><b>⑥ Grand Master</b>: die Gesamthelligkeit.</li></ul><p>In diesem Trainer lernst du den Command-Bereich Taste für Taste. Rechts siehst du ihn gezeichnet, darüber eine kleine Bühne mit 12 Scheinwerfern.</p>`,
+ tasks:[F('Please','Finde die Taste [[Please]] – das ist die Enter-Taste der grandMA2.'),F('Fixture','Finde die Objekt-Taste [[Fixture]] (gelb beschriftet).')]},
+{s:1,t:'So funktioniert die Command Line',illu:svgSyntax,
+ x:`<p>Die grandMA2 versteht Befehle wie einen Satz: <b>Was</b> – <b>Funktion</b> – <b>Wert/Ziel</b> – <b>ausführen</b>.</p><p>Jede Taste schreibt ein Wort in die Command Line. Erst [[Please]] führt den Befehl aus. Beispiel: [[Fixture]] 1 [[At]] 50 [[Please]] heißt „Scheinwerfer 1 auf 50 %“.</p><p>Tippst du nur eine Zahl, nimmt die Konsole das Standard-Objekt (meist Channel oder Fixture, je nach Einstellung). Im Simulator ist das immer Fixture.</p>`,
+ tasks:[C('Fixture 1','Wähle Scheinwerfer 1 aus: [[Fixture]] 1 [[Please]]'),C('Fixture 1 At 50','Setz Scheinwerfer 1 auf 50 %: [[Fixture]] 1 [[At]] 50 [[Please]]')]},
+{s:1,t:'Fehler korrigieren: Oops und Esc',
+ x:`<p>Vertippt? Kein Problem.</p><ul><li>[[Oops]] löscht das <b>letzte Wort</b> in der Command Line. Ist die Command Line leer, macht Oops den <b>letzten Befehl rückgängig</b> (Undo).</li><li>[[Esc]] löscht die <b>ganze</b> Command Line und schließt offene Pop-ups.</li><li>[[Clear]] leert ebenfalls eine volle Command Line, hat aber noch mehr Aufgaben (Stufe 3).</li></ul><p>Probier es aus: Tipp irgendwas und drück dann Oops oder Esc.</p>`,
+ tasks:[F('Oops'),F('Esc'),C('Fixture 2 At 30','Tipp [[Fixture]] 2 [[At]] 3 … vertipp dich absichtlich (z. B. 39), lösch mit [[Oops]] die Zahl und führ dann Fixture 2 At 30 aus.')]},
+{s:2,t:'Fixture und Channel',
+ x:`<p>Scheinwerfer wählst du über ihre Nummer (ID) an:</p><ul><li>[[Fixture]] = Fixture-ID, für Moving Heads, LED-Scheinwerfer usw.</li><li>[[Channel]] = Channel-ID, für klassische Dimmerkanäle.</li></ul><p>Im Patch kann ein Gerät beides haben. Ausgewählte Geräte sind auf der Bühne <b>gelb umrandet</b>. Eine neue Auswahl ersetzt die alte.</p>`,
+ tasks:[C('Fixture 3','Wähle Fixture 3.'),C('Fixture 7','Wähle Fixture 7.'),C('Channel 5','Wähle Channel 5.')]},
+{s:2,t:'Bereiche mit Thru',illu:()=>svgSel([1,2,3,4,5,6],'Fixture 1 Thru 6'),
+ x:`<p>[[Thru]] wählt einen ganzen Bereich: [[Fixture]] 1 [[Thru]] 6 sind die Geräte 1, 2, 3, 4, 5 und 6.</p><p>Praktisch: [[Fixture]] 8 [[Thru]] ohne zweite Zahl heißt „von 8 bis zum letzten Gerät“.</p>`,
+ tasks:[C('Fixture 1 Thru 6','Wähle Fixture 1 bis 6.'),C('Fixture 4 Thru 10','Wähle Fixture 4 bis 10.'),C('Fixture 8 Thru','Wähle Fixture 8 bis zum letzten Gerät.')]},
+{s:2,t:'Auswahl mit + und − bauen',illu:()=>svgSel([1,2,3,4,6,7,8,9,10],'Fixture 1 Thru 10 - 5'),
+ x:`<p>[[+]] fügt Geräte hinzu, [[-]] nimmt sie wieder heraus. Gelesen wird von links nach rechts.</p><ul><li>[[Fixture]] 1 [[+]] 3 [[+]] 5 → nur 1, 3 und 5</li><li>[[Fixture]] 1 [[Thru]] 10 [[-]] 5 → 1 bis 10 ohne 5</li></ul>`,
+ tasks:[C('Fixture 1 + 3 + 5','Wähle 1, 3 und 5.'),C('Fixture 1 Thru 10 - 5','Wähle 1 bis 10, aber ohne 5.'),C('Fixture 1 Thru 12 - 4 Thru 6','Wähle alle 12 Geräte ohne 4 bis 6.')]},
+{s:3,t:'Werte geben mit At',
+ x:`<p>[[At]] gibt der Auswahl einen Wert. Ohne weitere Angabe ist das die Helligkeit (Dimmer) in Prozent.</p><p>Die Werte erscheinen auf der Bühne <b>rot</b>: Rot heißt auf der grandMA2 „steht im Programmer“, also noch nicht gespeichert.</p><p>Die Auswahl bleibt nach dem Befehl bestehen. Du kannst danach direkt [[At]] 20 tippen, ohne neu auszuwählen.</p>`,
+ tasks:[C('Fixture 1 At 50','Gerät 1 auf 50 %.'),C('Fixture 1 Thru 4 At 75','Geräte 1 bis 4 auf 75 %.'),C('At 20','Die Auswahl steht noch. Setz sie nur mit [[At]] 20 auf 20 %.')]},
+{s:3,t:'Full und Null',
+ x:`<p>[[Full]] schreibt „At Full“, also 100 %. Für 0 % tippst du [[At]] 0.</p><p>Merke: [[Full]] ist schneller als At 100 und genau dasselbe.</p>`,
+ tasks:[C(['Fixture 5 Thru 8 At Full','Fixture 5 Thru 8 At 100'],'Geräte 5 bis 8 auf Full.'),C('Fixture 5 Thru 8 At 0','Und wieder auf 0.')]},
+{s:3,t:'Relative Werte und Auffächern',illu:svgFan,
+ x:`<p>Statt fester Werte kannst du <b>relativ</b> ändern: [[At]] [[+]] 10 macht alle ausgewählten Geräte 10 % heller, [[At]] [[-]] 10 dunkler.</p><p>Mit [[Thru]] hinter At werden Werte <b>aufgefächert</b> (Fan): Das erste Gerät bekommt den ersten Wert, das letzte den zweiten, dazwischen wird verteilt.</p>`,
+ tasks:[C('Fixture 1 Thru 12 At 50','Alle 12 Geräte auf 50 %.'),C('At + 10','Mach sie relativ 10 % heller.'),C('Fixture 1 Thru 12 At 0 Thru 100','Fächer alle 12 von 0 bis 100 auf.')]},
+{s:3,t:'Der Programmer und Clear',illu:svgClear,
+ x:`<p>Alles, was du gerade einstellst, landet im <b>Programmer</b>, einer Art Notizblock. Der Programmer hat Vorrang vor laufenden Cues.</p><p>[[Clear]] räumt in drei Stufen auf:</p><ul><li><b>1×</b> Auswahl aufheben</li><li><b>2×</b> aktive Werte deaktivieren (werden grau)</li><li><b>3×</b> Programmer komplett leeren</li></ul><p>Steht noch Text in der Command Line, leert Clear zuerst nur die Command Line.</p>`,
+ tasks:[C('Fixture 1 Thru 6 At 80','Erst etwas in den Programmer: Fixture 1 Thru 6 At 80.'),P('Clear',3,'Drück jetzt [[Clear]] dreimal hintereinander und beobachte die Bühne.')]},
+{s:4,t:'Gruppen speichern und aufrufen',
+ x:`<p>Eine <b>Group</b> merkt sich eine Auswahl, damit du nicht immer alle Nummern tippen musst.</p><ul><li>Auswahl treffen, dann [[Store]] [[Group]] 4 [[Please]]</li><li>Später: [[Group]] 4 [[Please]] wählt genau diese Geräte</li><li>Oder direkt: [[Group]] 4 [[At]] 60</li></ul><p>Die Groups 1–3 (Alle, Gerade, Ungerade) sind im Simulator schon angelegt.</p>`,
+ tasks:[C('Fixture 1 Thru 6','Wähle Fixture 1 bis 6.'),C('Store Group 4','Speichere die Auswahl als Group 4.'),P('Clear',1,'Hebe die Auswahl mit einmal [[Clear]] auf.'),C('Group 4','Ruf Group 4 auf.'),C('Group 4 At 60','Setz Group 4 auf 60 %.')]},
+{s:4,t:'Namen vergeben mit Label',
+ x:`<p>[[Label]] gibt einem Objekt einen Namen. Nach [[Label]] [[Group]] 4 [[Please]] öffnet sich ein Fenster, in das du den Namen schreibst.</p><p>Gute Namen sparen in der Show Zeit: „Front“, „Gegenlicht“, „Spots Bühne links“ …</p>`,
+ tasks:[C('Label Group 4','Benenne Group 4 (z. B. „Front“).'),C('Label Cue 1','Benenne auch einen Cue: Label Cue 1.')]},
+{s:4,t:'Filtern mit If',illu:()=>svgSel([2,4,6],'Group 2 If Fixture 1 Thru 6'),
+ x:`<p>[[If]] filtert eine Auswahl: Übrig bleibt nur, was in <b>beiden</b> Teilen steckt.</p><p>Group 2 enthält alle geraden Geräte (2, 4 … 12). [[Group]] 2 [[If]] [[Fixture]] 1 [[Thru]] 6 lässt davon nur 2, 4 und 6 übrig.</p><p>Auf der echten Konsole kann If noch mehr, z. B. nach Geräten filtern, die in einem Preset oder Cue benutzt werden.</p>`,
+ tasks:[F('If'),C('Group 2 If Fixture 1 Thru 6','Wähle nur die geraden Geräte zwischen 1 und 6.')]},
+{s:5,t:'Was sind Presets?',illu:svgPresets,
+ x:`<p>Ein <b>Preset</b> ist ein gespeicherter Wert, z. B. eine Farbe oder eine Position, den du immer wieder abrufst.</p><p>Schreibweise: <b>Typ.Nummer</b>. [[Preset]] 4.1 ist das erste Color-Preset.</p><p>Der große Vorteil: Cues merken sich den <b>Verweis</b> auf das Preset. Änderst du das Preset, ändern sich alle Cues mit, die es benutzen.</p>`,
+ tasks:[F('Preset'),F('.','Finde die Punkt-Taste [[.]] – du brauchst sie für Typ.Nummer.')]},
+{s:5,t:'Presets abrufen',
+ x:`<p>Mit einer Auswahl rufst du Presets so ab:</p><ul><li>[[Fixture]] 1 [[Thru]] 12 [[At]] [[Preset]] 4.1</li><li>oder kürzer, wenn schon ausgewählt: [[Preset]] 4.1 [[Please]]</li></ul><p>Im Simulator gibt es die Farben 4.1 Rot, 4.2 Grün, 4.3 Blau, 4.4 Weiß, 4.5 Amber, 4.6 Magenta und 4.7 Cyan.</p>`,
+ tasks:[C('Fixture 1 Thru 12 At Full','Mach erst alle hell: Fixture 1 Thru 12 At Full.'),C('Fixture 1 Thru 12 At Preset 4.1','Alle auf Rot (Preset 4.1).'),C('Group 2 At Preset 4.3','Die geraden Geräte (Group 2) auf Blau.'),C('Preset 4.5','Group 2 ist noch ausgewählt. Gib ihr nur mit Preset 4.5 Amber.')]},
+{s:5,t:'Eigene Presets speichern',
+ x:`<p>Werte einstellen, dann [[Store]] [[Preset]] Typ.Nummer [[Please]]. Gespeichert werden die Werte der ausgewählten Geräte aus dem Programmer.</p><p>Hier speicherst du einen Helligkeitsverlauf als Dimmer-Preset 1.1 und rufst ihn danach wieder ab.</p>`,
+ tasks:[C('Fixture 1 Thru 12 At 0 Thru 100','Fächer alle 12 Geräte von 0 bis 100 auf.'),C('Store Preset 1.1','Speichere das als Dimmer-Preset 1.1.'),P('Clear',3,'Leer den Programmer (3× [[Clear]]).'),C('Fixture 1 Thru 12 At Preset 1.1','Ruf das Preset für alle 12 wieder ab.')]},
+{s:6,t:'Cues speichern',illu:svgSeq,
+ x:`<p>Ein <b>Cue</b> ist eine gespeicherte Lichtstimmung. Viele Cues hintereinander bilden eine <b>Sequenz</b> (Cue-Liste).</p><p>Stimmung bauen, dann [[Store]] [[Cue]] 1 [[Please]]. Danach den Programmer leeren und die nächste Stimmung bauen.</p><p>Ist der Cue schon belegt, fragt die echte Konsole: Overwrite, Merge oder Remove. [[Store]] allein speichert einfach den nächsten freien Cue.</p>`,
+ tasks:[P('Clear',3,'Starte sauber: 3× [[Clear]].'),C('Fixture 1 Thru 6 At Full','Baue Stimmung 1: Fixture 1 Thru 6 At Full.'),C('Store Cue 1','Speichere sie als Cue 1.'),P('Clear',3,'Programmer leeren (3× [[Clear]]).'),C('Fixture 7 Thru 12 At 70','Baue Stimmung 2: Fixture 7 Thru 12 At 70.'),C('Store Cue 2','Speichere sie als Cue 2.')]},
+{s:6,t:'Cues abspielen',setup:'cues',
+ x:`<ul><li>[[Goto]] [[Cue]] 1 springt direkt zu Cue 1.</li><li>[[Go+]] startet den nächsten Cue, [[Go-]] geht einen zurück.</li><li>[[Pause]] hält einen laufenden Fade an.</li><li>[[Top]] springt an den Anfang der Sequenz.</li></ul><p>Go+, Go-, Pause und Top wirken sofort auf den ausgewählten Executor, solange die Command Line leer ist. Leer vorher den Programmer, sonst überdeckt er die Cues.</p>`,
+ tasks:[P('Clear',3,'Programmer leeren: 3× [[Clear]].'),C('Goto Cue 1','Spring zu Cue 1.'),P('Go+',1,'Drück [[Go+]] für den nächsten Cue.'),P('Go+',1,'Noch einmal [[Go+]].'),P('Go-',1,'Einen zurück mit [[Go-]].'),P('Top',1,'Zurück an den Anfang mit [[Top]].'),F('Pause')]},
+{s:6,t:'Cues ändern: Update und Edit',setup:'cues',
+ x:`<p>[[Update]] schreibt die Programmer-Werte in das, was gerade läuft, also in den aktiven Cue (und in benutzte Presets). Das ist der schnellste Weg, einen Cue während der Probe zu korrigieren.</p><p>[[Edit]] [[Cue]] 2 öffnet den Cue im Editor, wo du Werte und Zeiten ändern kannst.</p>`,
+ tasks:[P('Clear',3,'Programmer leeren: 3× [[Clear]].'),C('Goto Cue 2','Spring zu Cue 2.'),C('Fixture 7 Thru 9 At Preset 4.2','Ändere Fixture 7 bis 9 auf Grün.'),C('Update','Schreib die Änderung mit [[Update]] [[Please]] in Cue 2.'),P('Clear',3,'Programmer leeren – Cue 2 bleibt jetzt grün.'),C('Edit Cue 2','Öffne Cue 2 im Editor.')]},
+{s:6,t:'Copy, Move und Delete',setup:'cues',
+ x:`<ul><li>[[Copy]] [[Cue]] 1 [[At]] 5 kopiert Cue 1 auf Cue 5.</li><li>[[Move]] [[Cue]] 5 [[At]] 4 verschiebt Cue 5 auf Platz 4.</li><li>[[Delete]] [[Cue]] 4 löscht Cue 4.</li></ul><p>Das funktioniert genauso mit Groups, Presets und fast allen anderen Objekten. Rechts unter „Cues“ siehst du die Liste.</p>`,
+ tasks:[C('Copy Cue 1 At 5','Kopiere Cue 1 auf Cue 5.'),C('Move Cue 5 At 4','Verschiebe Cue 5 auf Cue 4.'),C('Delete Cue 4','Lösche Cue 4.')]},
+{s:7,t:'Sequenz auf einen Executor legen',illu:svgSeq,setup:'cues',
+ x:`<p>Damit du eine Sequenz mit Fader und Go-Tasten fahren kannst, muss sie auf einem <b>Executor</b> liegen.</p><p>[[Assign]] [[Sequ]] 1 [[At]] [[Exec]] 1 [[Please]]. In der Command Line steht dann „Assign Sequence 1 At Executor 1“.</p><p>[[Off]] [[Exec]] 1 schaltet ihn aus, [[On]] [[Exec]] 1 wieder ein.</p>`,
+ tasks:[C('Assign Sequence 1 At Executor 1','Leg Sequenz 1 auf Executor 1.'),C('Off Executor 1','Schalte Executor 1 aus.'),C('On Executor 1','Und wieder ein.')]},
+{s:7,t:'Executor-Tasten: Temp, Fix, Select',setup:'cues',
+ x:`<ul><li>[[Select]] + Executor macht ihn zum <b>ausgewählten</b> Executor. Auf ihn wirken die großen Go-Tasten.</li><li>[[Fix]] + Executor hält ihn beim Seitenwechsel fest.</li><li>[[Temp]] lässt einen Executor nur leuchten, solange du die Taste drückst.</li></ul><p>Per Command Line geht das auch: [[Select]] [[Exec]] 1 [[Please]] macht Executor 1 zum ausgewählten. Danach wirkt [[Go+]] bei <b>leerer</b> Command Line sofort auf ihn, ganz ohne Please.</p>`,
+ tasks:[F('Select'),F('Fix'),F('Temp'),C('Select Executor 1','Mach Executor 1 zum ausgewählten Executor: [[Select]] [[Exec]] 1 [[Please]]'),P('Go+',1,'Drück jetzt bei leerer Command Line [[Go+]]. Executor 1 geht zum nächsten Cue.')]},
+{s:7,t:'Seiten wechseln mit Page',
+ x:`<p>Die Executors gibt es auf vielen <b>Seiten</b> (Pages). So kannst du für jeden Song oder Show-Teil eine eigene Fader-Belegung haben.</p><p>[[Page]] 2 [[Please]] wechselt auf Seite 2. Mit [[Fix]] festgehaltene Executors bleiben dabei an ihrem Platz.</p>`,
+ tasks:[C('Page 2','Wechsel auf Page 2.'),C('Page 1','Zurück auf Page 1.')]},
+{s:8,t:'Einleuchten: Highlt, Solo, Prev, Next',
+ x:`<p>Beim Einleuchten willst du Geräte schnell finden:</p><ul><li>[[Highlt]] macht die Auswahl hell und weiß.</li><li>[[Next]] / [[Prev]] gehen <b>einzeln</b> durch die Auswahl (gestrichelter Rand).</li><li>[[Solo]] lässt nur die Auswahl leuchten.</li></ul><p>Highlt und Solo schaltest du mit nochmaligem Drücken wieder aus.</p>`,
+ tasks:[C('Fixture 1 Thru 6','Wähle Fixture 1 bis 6.'),P('Highlt',1,'Schalte [[Highlt]] ein.'),P('Next',1,'Drück [[Next]] – nur ein Gerät ist jetzt dran.'),P('Next',1,'Noch einmal [[Next]].'),P('Prev',1,'Zurück mit [[Prev]].'),P('Highlt',1,'[[Highlt]] wieder aus.'),P('Solo',1,'Probier [[Solo]].'),P('Solo',1,'Und [[Solo]] wieder aus.')]},
+{s:8,t:'Unsichtbar arbeiten: Blind, Prvw, Freeze',
+ x:`<ul><li>[[Blind]]: Der Programmer geht nicht auf die Bühne. Du programmierst „im Dunkeln“, während die Show weiterläuft.</li><li>[[Prvw]]: Cues in den Vorschaufenstern ansehen, ohne Ausgabe.</li><li>[[Freeze]]: friert die gesamte Ausgabe ein.</li></ul><p>Achte oben rechts auf der Bühne auf die roten Hinweise BLIND und FREEZE.</p>`,
+ tasks:[P('Clear',3,'Programmer leeren: 3× [[Clear]].'),P('Blind',1,'Schalte [[Blind]] ein.'),C('Fixture 1 Thru 12 At Full','Mach alle hell – auf der Bühne passiert nichts!'),P('Blind',1,'[[Blind]] aus – jetzt siehst du die Werte.'),P('Freeze',1,'Schalte [[Freeze]] ein.'),C('Fixture 1 Thru 12 At 10','Ändere auf 10 % – die Bühne bleibt eingefroren.'),P('Freeze',1,'[[Freeze]] aus.'),F('Prvw')]},
+{s:8,t:'Align, Set und die MA-Taste',
+ x:`<ul><li>[[Align]] fächert Werte beim Drehen der Encoder über die Auswahl auf. Mehrfaches Drücken wechselt den Modus.</li><li>[[Set]] öffnet die direkte Eingabe für einen Wert, z. B. am Encoder.</li><li>[[MA]] ist die Shift-Taste: gedrückt halten + andere Taste = Zweitfunktion.</li></ul>`,
+ tasks:[F('Align'),F('Set'),F('MA')]},
+{s:9,t:'Effekte',
+ x:`<p>Effekte bewegen Werte automatisch, z. B. ein Dimmer-Lauflicht oder einen Kreis bei Moving Heads.</p><p>Auswahl treffen, dann [[Effect]] 1 [[Please]]. Im Simulator liegen im Effekt-Pool 7 fertige Effekte, z. B. 1 = Dimmer-Chase, 2 = alle pulsieren gleich, 4 = Pan-Welle, 5 = Farbwelle.</p><p>Effekte stehen im Programmer: 3× [[Clear]] macht sie wieder weg, und [[Store]] [[Cue]] speichert einen laufenden Effekt mit in den Cue. Wie man Effekte selbst baut, lernst du in den nächsten vier Lektionen.</p>`,
+ tasks:[C('Fixture 1 Thru 12 At Full','Alle auf Full.'),C('Effect 1','Starte Effekt 1 auf der Auswahl.'),C('Effect 2','Wechsel zu Effekt 2.'),P('Clear',3,'Alles weg mit 3× [[Clear]].')]},
+{s:9,t:'Effekt-Bausteine: Form, Speed, Low und High',fx:true,illu:svgWave,
+ x:`<p>Ein Effekt auf der grandMA2 besteht aus einer oder mehreren <b>Effekt-Zeilen</b>. Jede Zeile bewegt ein Attribut (z. B. Dimmer) nach einer <b>Form</b> zwischen <b>Low</b> und <b>High</b>, mit einer bestimmten <b>Speed</b>.</p><p>Auf der Konsole öffnest du einen Effekt mit [[Edit]] [[Effect]] 2 [[Please]]. Unten siehst du einen vereinfachten Nachbau dieses Editors: oben der Effekt-Pool, darunter die Zeilen-Tabelle, die Kurve (gelbe Punkte = deine Geräte) und die Werte der gewählten Zeile.</p>`,
+ tasks:[C('Fixture 1 Thru 12','Wähle alle 12 Geräte.'),C('Edit Effect 2','Öffne Effekt 2 im Editor: [[Edit]] [[Effect]] 2 [[Please]]'),
+  X(()=>playing(),'Tipp im Editor auf „▶ Abspielen“.','play'),
+  X(F=>ln(F).form==='PWM','Stell die Form auf „PWM (Rechteck)“. Die Lampen blitzen jetzt hart an und aus.','form'),
+  X(F=>ln(F).speed>=110&&ln(F).speed<=130,'Stell Speed auf etwa 120 BPM (zwei Blitze pro Sekunde).','speed'),
+  X(F=>ln(F).low>=20&&ln(F).low<=40,'Stell Low auf etwa 30 %. Die Lampen gehen jetzt nicht mehr ganz aus.','low')]},
+{s:9,t:'Phase, Width und Dir: Lauflichter',fx:true,
+ x:`<p>Die <b>Phase</b> verteilt den Effekt über die Geräte. „Phase von 0 bis 0“ heißt: alle machen dasselbe. „0 bis 360“ heißt: eine ganze Welle wird gleichmäßig über die Auswahl verteilt. So entstehen Lauflichter.</p><p>Die <b>Width</b> bestimmt, wie lange jedes Gerät pro Durchlauf an ist. Mit <b>Dir</b> drehst du die Laufrichtung um.</p><p>Schau auf die Kurve: Die gelben Punkte (deine Geräte) verteilen sich, sobald du die Phase änderst.</p>`,
+ tasks:[C('Fixture 1 Thru 12','Wähle alle 12 Geräte.'),C('Edit Effect 2','Öffne Effekt 2 im Editor.'),X(()=>playing(),'Tipp auf „▶ Abspielen“.','play'),
+  X(F=>ln(F).phTo-ln(F).phFrom>=360,'Stell „Phase bis“ auf 360°. Jetzt läuft eine Welle durch.','phTo'),
+  X(F=>ln(F).width<=30,'Stell Width auf 25 % oder weniger. Aus der Welle wird ein Lauflicht.','width'),
+  X(F=>ln(F).dir==='<','Stell Dir auf „rückwärts“.','dir'),
+  X(F=>ln(F).dir==='<>','Und jetzt auf „hin und her“.','dir')]},
+{s:9,t:'Groups, Blocks und Wings',fx:true,
+ x:`<p>Mit diesen drei Werten machst du aus einem einfachen Lauflicht ein Muster:</p><ul><li><b>Groups</b>: Nach so vielen Geräten fängt die Phase von vorne an. Groups 4 bei 12 Geräten = 3 Lauflichter nebeneinander.</li><li><b>Blocks</b>: So viele benachbarte Geräte machen dasselbe.</li><li><b>Wings</b>: spiegelt den Effekt. Wings 2 = linke und rechte Hälfte laufen spiegelbildlich.</li></ul><p>0 bedeutet jeweils „aus“.</p>`,
+ tasks:[C('Fixture 1 Thru 12','Wähle alle 12 Geräte.'),C('Edit Effect 3','Öffne Effekt 3 (PWM-Lauflicht).'),X(()=>playing(),'Tipp auf „▶ Abspielen“.','play'),
+  X(F=>ln(F).groups===4,'Stell Groups auf 4.','groups'),
+  X(F=>ln(F).groups===0&&ln(F).blocks===3,'Groups wieder auf 0 (aus) und Blocks auf 3.','blocks'),
+  X(F=>ln(F).blocks===0&&ln(F).wings===2,'Blocks auf 0 und Wings auf 2. Das Licht läuft jetzt gespiegelt.','wings')]},
+{s:9,t:'Eigenen Effekt bauen und speichern',fx:true,
+ x:`<p>Jetzt baust du einen Effekt ganz neu: Die Scheinwerfer sollen schwenken (Pan) und dabei die Farbe wechseln. Dafür brauchst du <b>zwei Zeilen</b>, eine pro Attribut.</p><p>Gespeichert wird wie alles auf der grandMA2: [[Store]] [[Effect]] 8 [[Please]]. Danach rufst du ihn mit einer Auswahl und [[Effect]] 8 auf. Der Speichern-Knopf im Editor macht dasselbe.</p>`,
+ tasks:[C('Fixture 1 Thru 12 At Full','Mach alle Geräte an, damit du Pan und Farbe siehst.'),
+  X(F=>F.isNew,'Tipp im Editor auf „+ Neuer Effekt“.','new'),
+  X(F=>ln(F).attr==='Pan','Stell in Zeile 1 das Attribut auf „Pan (Schwenk)“.','attr'),
+  X(F=>ln(F).attr==='Pan'&&ln(F).phTo-ln(F).phFrom>=360,'Stell „Phase bis“ auf 360°, damit die Geräte als Welle schwenken.','phTo'),
+  X(F=>F.e.lines.length>=2,'Füg mit „+ Zeile“ eine zweite Zeile hinzu.','addline'),
+  X(F=>ln(F,1).attr==='Color','Zeile 2 ist ausgewählt. Stell ihr Attribut auf „Farbe“ (falls es das noch nicht ist), und wähl Low- und High-Farbe nach Geschmack.','attr','Tipp in der Zeilen-Tabelle auf Zeile 2, dann ändere oben bei den Werten das Attribut.'),
+  X(()=>playing(),'Tipp auf „▶ Abspielen“ und schau dir deinen Effekt an.','play'),
+  C('Store Effect 8','Speichere ihn als Effekt 8: [[Store]] [[Effect]] 8 [[Please]]'),
+  P('Clear',3,'Leer den Programmer mit 3× [[Clear]]. Der Effekt stoppt.'),
+  C('Fixture 1 Thru 12 At Full','Mach die Geräte wieder an.'),
+  C('Effect 8','Ruf deinen eigenen Effekt auf: [[Effect]] 8 [[Please]]')]},
+{s:9,t:'Makros',
+ x:`<p>Ein <b>Makro</b> ist eine gespeicherte Kette von Befehlen. Ein Tastendruck spart dir viele.</p><p>Im Simulator: Makro 1 = alle Geräte weiß auf Full, Makro 2 = Regenbogen, Makro 3 = Programmer leeren.</p>`,
+ tasks:[C('Macro 1','Starte Makro 1.'),C('Macro 2','Starte Makro 2.'),C('Macro 3','Starte Makro 3.')]},
+{s:9,t:'Zeiten und Tempo: Time und Learn',
+ x:`<p>[[Time]] ist für Fade- und Delay-Zeiten zuständig, z. B. die Programmer-Zeit oder Zeiten von Cues. Mehrfaches Drücken wechselt zwischen den Zeitarten. Cue-Zeiten bearbeitest du am bequemsten im Sequenz-Fenster ([[Edit]] [[Cue]]).</p><p>[[Learn]] im Takt drücken überträgt das Tempo auf Chaser und Effekte.</p>`,
+ tasks:[F('Time'),F('Learn')]},
+{s:9,t:'System: Backup, Setup, Tools, Help, List, View',
+ x:`<ul><li>[[Backup]]: Show speichern und laden. <b>Zweimal drücken = schnell speichern.</b></li><li>[[Setup]]: Patch, Konsolen- und Netzwerkeinstellungen.</li><li>[[Tools]]: Zusatzwerkzeuge.</li><li>[[Help]] und danach eine Taste: Hilfe zu dieser Taste.</li><li>[[List]]: Objekte in der Command Line auflisten.</li><li>[[View]]: gespeicherte Bildschirm-Layouts.</li></ul>`,
+ tasks:[P('Backup',2,'Speichere die Show schnell: 2× [[Backup]].'),F('Setup'),F('Tools'),P('Help',1,'Drück [[Help]] und danach irgendeine Taste – du bekommst ihre Erklärung.'),F('List'),F('View')]},
+{s:10,t:'Moving Heads: Attribute und Encoder',
+ x:`<p>Moving Heads haben viel mehr als Helligkeit: Sie können sich drehen (<b>Pan</b>), neigen (<b>Tilt</b>), den Strahl eng oder breit machen (<b>Zoom</b>) und Muster projizieren (<b>Gobos</b>). Jede dieser Funktionen heißt <b>Attribut</b>.</p><p>Die Attribute sind in <b>Feature-Gruppen</b> sortiert: Dimmer, Position, Gobo, Color, Beam, Focus … Auf der grandMA2 wählst du oben in der <b>Encoder-Leiste</b> eine Gruppe und drehst dann an den Encodern unter dem Bildschirm.</p><p>Im Simulator findest du die Encoder unter der Command Line: oben die Ebenen, rechts die Drehknöpfe. Zieh am Knopf oder tipp auf − und +. Die Werte landen wie immer <b>rot im Programmer</b>.</p>`,
+ tasks:[C('Fixture 1 Thru 12 At Full','Mach alle 12 Geräte an.'),
+  X(()=>encLayer==='Position','Tipp in der Encoder-Leiste auf „Position“.','layer_Position','Die Ebenen-Knöpfe liegen direkt unter der Command Line.'),
+  X(()=>selAll('pan',v=>Math.abs(v-50)>=15),'Dreh den Pan-Encoder deutlich nach links oder rechts.','enc_pan'),
+  X(()=>selAll('tilt',v=>v>=70),'Dreh Tilt hoch (über +54°), bis die Strahlen weit ins Publikum reichen.','enc_tilt'),
+  X(()=>encLayer==='Focus'&&selAll('zoom',v=>v<=25),'Wechsel auf „Focus“ und mach den Zoom ganz eng (Spot, unter 18°).','enc_zoom'),
+  X(()=>selAll('gobo',v=>v==='dots'),'Wechsel auf „Gobo“ und wähl das Gobo „Punkte“.','enc_gobo')]},
+{s:10,t:'Position-, Gobo- und Focus-Presets',
+ x:`<p>Positionen dreht niemand in der Show von Hand. Dafür gibt es Presets: <b>2.x</b> = Position, <b>3.x</b> = Gobo, <b>6.x</b> = Focus (Zoom).</p><p>Im Simulator gibt es: 2.1 Mitte, 2.2 Publikum, 2.3 Kreuz, 2.4 Fächer · 3.1 Offen, 3.2 Punkte, 3.3 Streifen, 3.4 Stern · 6.1 Spot eng, 6.2 Wash breit.</p><p>Eigene Position speichern: mit den Encodern einstellen, dann [[Store]] [[Preset]] 2.5. Gespeichert werden nur die Werte, die zur Feature-Gruppe passen (bei 2.x also Pan und Tilt).</p>`,
+ tasks:[P('Clear',3,'Starte mit leerem Programmer (3× [[Clear]]).'),C('Fixture 1 Thru 12 At Full','Alle an.'),C('At Preset 2.2','Schick alle ins Publikum: [[At]] [[Preset]] 2.2'),C('Group 2 At Preset 2.3','Die geraden Geräte (Group 2) ins Kreuz: Preset 2.3.'),C('Fixture 1 Thru 12 At Preset 3.4','Alle mit Stern-Gobo (Preset 3.4).'),C('At Preset 6.1','Zoom eng mit Preset 6.1.'),
+  X(()=>selAll('tilt',v=>v<=40),'Stell mit dem Tilt-Encoder eine eigene Position ein: Tilt unter −27° (die Strahlen werden kurz).','enc_tilt','Wechsel in der Encoder-Leiste auf „Position“ und dreh Tilt runter.'),
+  C('Store Preset 2.5','Speichere das als Position-Preset 2.5.'),P('Clear',3,'Programmer leeren.'),C('Fixture 1 Thru 12 At Full','Wieder alle an.'),C('At Preset 2.5','Ruf deine Position 2.5 ab.')]},
+{s:11,t:'Szenario 1: Band-Intro',
+ x:`<p><b>Der Auftrag:</b> Heute Abend spielt eine Band. Du baust das Intro als Cues 1 bis 3. Wie du dahin kommst, entscheidest du selbst. Es gibt keinen festen Befehl, geprüft wird nur das Ergebnis.</p><p>Wenn du hängst: <b>Hilfe</b> drücken. Dort gibt es auch einen möglichen Lösungsweg. Vorhandene Cues darfst du überschreiben.</p>`,
+ tasks:[X(()=>allF('1',v=>v.dim===0),'Cue 1: Blackout, alle Geräte aus.',null,'Programmer leeren, alle Geräte auf 0 und als Cue 1 speichern.','3× [[Clear]], [[Fixture]] 1 [[Thru]] 12 [[At]] 0 [[Please]], [[Store]] [[Cue]] 1 [[Please]]'),
+  X(()=>allF('2',(v,f)=>f%2?near(v.dim,60,6)&&colIs(v.col,'4.3'):v.dim===0),'Cue 2: Nur die ungeraden Geräte (Group 3) blau auf 60 %, alle anderen aus.',null,'Erst alle auf 0, dann Group 3 auf 60 und Blau (Preset 4.3), dann speichern.','3× [[Clear]], [[Fixture]] 1 [[Thru]] 12 [[At]] 0 [[Please]], [[Group]] 3 [[At]] 60 [[Please]], [[Preset]] 4.3 [[Please]], [[Store]] [[Cue]] 2 [[Please]]'),
+  X(()=>allF('3',v=>v.dim>=95&&colIs(v.col,'4.5')&&v.tilt>=80),'Cue 3: Alle auf Full in Amber, die Moving Heads zeigen ins Publikum (Preset 2.2).',null,'Auswahl, Full, Farbe Amber (4.5) und Position 2.2, dann als Cue 3 speichern.','3× [[Clear]], [[Fixture]] 1 [[Thru]] 12 [[At]] [[Full]] [[Please]], [[At]] [[Preset]] 4.5 [[Please]], [[At]] [[Preset]] 2.2 [[Please]], [[Store]] [[Cue]] 3 [[Please]]'),
+  X(()=>S.exec.on&&S.exec.cur==='3'&&progClear(),'Generalprobe: Programmer leeren, mit Goto zu Cue 1 und dann mit Go+ bis Cue 3 fahren.',null,'Der Programmer muss leer sein, sonst siehst du die Cues nicht richtig.','3× [[Clear]], [[Goto]] [[Cue]] 1 [[Please]], [[Go+]], [[Go+]]')]},
+{s:11,t:'Szenario 2: Refrain mit Effekten',
+ x:`<p><b>Der Auftrag:</b> Für den Refrain brauchst du zwei Cues mit laufenden Effekten. Ein laufender Effekt wird mit [[Store]] [[Cue]] in den Cue gespeichert.</p>`,
+ tasks:[X(()=>allF('4',v=>v.dim>=95&&colIs(v.col,'4.1'))&&cueFx('4',l=>l.form==='PWM'),'Cue 4: Alle Rot auf Full, dazu läuft das PWM-Lauflicht (Effekt 3).',null,'Erst Full und Rot, dann Effekt 3 auf die Auswahl, dann Cue 4 speichern.','3× [[Clear]], [[Fixture]] 1 [[Thru]] 12 [[At]] [[Full]] [[Please]], [[At]] [[Preset]] 4.1 [[Please]], [[Effect]] 3 [[Please]], [[Store]] [[Cue]] 4 [[Please]]'),
+  X(()=>!!S.cues['4']&&!!(S.cues['4'].name||'').trim(),'Gib Cue 4 einen Namen, z. B. „Refrain“.',null,'Mit Label öffnest du das Namensfenster.','[[Label]] [[Cue]] 4 [[Please]], Namen eintippen, OK'),
+  X(()=>allF('5',v=>v.dim>=95&&colIs(v.col,'4.7'))&&cueFx('5',l=>l.attr==='Pan'),'Cue 5: Alle Cyan auf Full mit Pan-Welle (Effekt 4).',null,'Wie bei Cue 4, nur mit Cyan (4.7) und Effekt 4. Vorher Programmer leeren, damit das Lauflicht nicht mitkommt.','3× [[Clear]], [[Fixture]] 1 [[Thru]] 12 [[At]] [[Full]] [[Please]], [[At]] [[Preset]] 4.7 [[Please]], [[Effect]] 4 [[Please]], [[Store]] [[Cue]] 5 [[Please]]'),
+  X(()=>S.exec.on&&S.exec.cur==='5'&&progClear(),'Programmer leeren und Cue 5 abspielen. Die Pan-Welle muss aus dem Cue kommen.',null,'','3× [[Clear]], [[Goto]] [[Cue]] 5 [[Please]]')]},
+{s:11,t:'Szenario 3: Fehlersuche im Cue',setup:()=>{const v={};for(let f=1;f<=N;f++)v[f]={...DEF,dim:f===8?0:100,col:f===3?COLS['4.1'][1]:'#ffffff'};S.cues['30']={name:'Kaputt',vals:v}},
+ x:`<p><b>Der Auftrag:</b> Ein Kollege hat Cue 30 programmiert: alle Geräte weiß auf Full. Aber in der Probe sehen zwei Geräte falsch aus. Finde sie und repariere den Cue.</p><p>Zum Suchen helfen [[Highlt]], [[Solo]] und [[Next]]. Zum Reparieren: Gerät korrigieren und [[Update]] [[Please]].</p>`,
+ tasks:[X(()=>S.exec.on&&S.exec.cur==='30'&&progClear(),'Leer den Programmer und ruf Cue 30 auf.',null,'','3× [[Clear]], [[Goto]] [[Cue]] 30 [[Please]]'),
+  X(()=>allF('30',v=>v.dim>=95&&!colIs(v.col,'4.1')),'Repariere Cue 30: alle Geräte weiß auf Full. Speichere mit Update.',null,'Ein Gerät ist dunkel, eins hat die falsche Farbe. Schau auf die Bühne. Gerät 8 und Gerät 3 sind die Übeltäter.','[[Fixture]] 8 [[At]] [[Full]] [[Please]], [[Fixture]] 3 [[At]] [[Preset]] 4.4 [[Please]], [[Update]] [[Please]]'),
+  X(()=>S.exec.on&&S.exec.cur==='30'&&progClear()&&allF('30',v=>v.dim>=95),'Kontrolle: Programmer leeren und prüfen, dass Cue 30 jetzt stimmt.',null,'','3× [[Clear]]')]},
+{s:12,t:'Abschlussprüfung',
+ x:`<p>Jetzt ohne Tipps im Text: Lies die Aufgabe, überleg dir den Befehl und tipp ihn ein. Nach zwei Fehlversuchen zeigt dir der Trainer die Lösung.</p>`,
+ tasks:[P('Clear',3,'Starte mit leerem Programmer.'),C('Fixture 1 Thru 12 - 6 At 80','Alle 12 Geräte außer Nummer 6 auf 80 %.'),C('Store Group 5','Speichere diese Auswahl als Group 5.'),C('Group 5 At Preset 4.7','Gib Group 5 die Farbe Cyan (Preset 4.7).'),C('Store Cue 10','Speichere das als Cue 10.'),P('Clear',3,'Programmer leeren.'),C('Goto Cue 10','Ruf Cue 10 auf.'),C(['Copy Cue 10 At 11'],'Kopiere Cue 10 auf Cue 11.'),C('Delete Cue 10','Lösche Cue 10.'),C('Page 3','Wechsel auf Page 3.'),P('Backup',2,'Und zum Schluss: Show speichern!')]}
+];
+const STUFEN=['','Stufe 1 · Die Konsole','Stufe 2 · Auswählen','Stufe 3 · Werte geben','Stufe 4 · Gruppen','Stufe 5 · Presets','Stufe 6 · Cues','Stufe 7 · Executor & Pages','Stufe 8 · Programmer-Werkzeuge','Stufe 9 · Effekte, Makros & System','Stufe 10 · Moving Heads','Stufe 11 · Show-Szenarien','Stufe 12 · Prüfung'];
+
+/* ================= EFFEKTE ================= */
+const FORMS={Sin:'Sinus',Cos:'Cosinus',Ramp:'Rampe ↗',RampMinus:'Rampe ↘',PWM:'PWM (Rechteck)',Chase:'Chase (Buckel)',Step:'Stufen',Random:'Zufall'};
+const ATTRS={Dimmer:'Dimmer',Pan:'Pan (Schwenk)',Color:'Farbe'};
+const DIRS={'>':'vorwärts','<':'rückwärts','<>':'hin und her'};
+const newLine=a=>({attr:a||'Dimmer',form:'Sin',low:0,high:100,speed:60,rate:1,phFrom:0,phTo:0,width:100,groups:0,blocks:0,wings:0,dir:'>',cLow:'4.1',cHigh:'4.3'});
+const LN=o=>Object.assign(newLine(o.attr),o);
+function defEffects(){return{1:{name:'Dimmer-Chase',lines:[LN({phTo:360})]},2:{name:'Pulsieren gleich',lines:[LN({})]},3:{name:'PWM-Lauflicht',lines:[LN({form:'PWM',width:25,phTo:360,speed:90})]},
+ 4:{name:'Pan-Welle',lines:[LN({attr:'Pan',low:15,high:85,phTo:360,speed:30})]},5:{name:'Farbwelle Rot/Blau',lines:[LN({attr:'Color',phTo:360,speed:30})]},
+ 6:{name:'Zufalls-Glitzer',lines:[LN({form:'Random',speed:240})]},7:{name:'Wings von außen',lines:[LN({form:'PWM',width:30,phTo:360,wings:2})]}}}
+/* ================= SIMULATOR-ZUSTAND ================= */
+const N=12,range=(a,b)=>Array.from({length:b-a+1},(_,i)=>a+i);
+const COLS={'4.1':['Rot','#ff3b30'],'4.2':['Grün','#34c759'],'4.3':['Blau','#2f6bff'],'4.4':['Weiß','#ffffff'],'4.5':['Amber','#ffb000'],'4.6':['Magenta','#ff2fd0'],'4.7':['Cyan','#00e5ff']};
+const WARM='#fff1d6';
+function fresh(){const p={};for(const k in COLS)p[k]={name:COLS[k][0],g:{col:COLS[k][1]}};
+ Object.assign(p,{'2.1':{name:'Mitte',g:{pan:50,tilt:50}},'2.2':{name:'Publikum',g:{pan:50,tilt:85}},'2.3':{name:'Kreuz',fn:(i,n)=>({pan:i<n/2?72:28,tilt:65})},'2.4':{name:'Fächer',fn:(i,n)=>({pan:Math.round(25+50*(n>1?i/(n-1):.5)),tilt:60})},
+ '3.1':{name:'Offen',g:{gobo:'open'}},'3.2':{name:'Punkte',g:{gobo:'dots'}},'3.3':{name:'Streifen',g:{gobo:'stripes'}},'3.4':{name:'Stern',g:{gobo:'star'}},'6.1':{name:'Spot eng',g:{zoom:12}},'6.2':{name:'Wash breit',g:{zoom:92}}});
+ return{sel:[],step:null,prog:{},groups:{1:{name:'Alle',ids:range(1,12)},2:{name:'Gerade',ids:[2,4,6,8,10,12]},3:{name:'Ungerade',ids:[1,3,5,7,9,11]}},
+ presets:p,cues:{},exec:{seq:1,on:false,cur:null},page:1,blind:false,highlt:false,solo:false,freeze:false,frozen:null,effects:defEffects(),fxRun:[]}}
+function fixFns(){const d=fresh().presets;['2.3','2.4'].forEach(k=>{if(S.presets[k]&&!S.presets[k].v)S.presets[k].fn=d[k].fn})}
+let S=fresh(),undo=[],tok=[],clearStage=0,helpNext=false,streak={k:null,n:0},backupN=0;
+const clone=o=>JSON.parse(JSON.stringify(o));
+const isNum=t=>/^\d+(\.\d+)?$/.test(t)||/^\d*\.\d*$/.test(t);
+const cueKeys=()=>Object.keys(S.cues).sort((a,b)=>parseFloat(a)-parseFloat(b));
+const $=id=>document.getElementById(id);
+
+const ATK=['dim','col','pan','tilt','zoom','gobo'];
+const DEF={dim:0,col:WARM,pan:50,tilt:50,zoom:50,gobo:'open'};
+function base(f){const o={...DEF};if(S.exec.on&&S.exec.cur&&S.cues[S.exec.cur]){const v=S.cues[S.exec.cur].vals[f];if(v)ATK.forEach(k=>{if(v[k]!=null)o[k]=v[k]})}return o}
+function out(f,noProg){const o=base(f),p=S.prog[f];
+ if(p&&!noProg&&!S.blind)ATK.forEach(k=>{if(p[k]!=null)o[k]=p[k]});
+ const act=S.step!=null?[S.sel[S.step]]:S.sel;
+ if(S.highlt&&act.includes(f)){o.dim=100;o.col='#ffffff'}
+ if(S.solo&&!act.includes(f))o.dim=0;return o}
+function look(){const r={};for(let f=1;f<=N;f++){const o=base(f),p=S.prog[f];if(p&&!p.ina)ATK.forEach(k=>{if(p[k]!=null)o[k]=p[k]});r[f]=o}return r}
+function setP(ids,fn){ids.forEach((f,i)=>{const p=S.prog[f]||(S.prog[f]={});fn(p,f,i);p.ina=false})}
+
+const frac=x=>x-Math.floor(x);
+function hash(n){const x=Math.sin(n*127.1+311.7)*43758.5453;return frac(x)}
+function fForm(l,x,seed){const w=Math.max(.05,l.width/100);
+ if(l.form==='PWM')return x<(l.width>=100?.5:w)?1:0;
+ if(x>w)return 0;x=x/w;
+ switch(l.form){case'Sin':return .5-.5*Math.cos(2*Math.PI*x);case'Cos':return .5+.5*Math.cos(2*Math.PI*x);case'Ramp':return x;case'RampMinus':return 1-x;
+ case'Chase':return 1-Math.abs(2*x-1);case'Step':return Math.min(1,Math.floor(x*4)/3);case'Random':return hash(seed);}return 0}
+function fPos(i,n,l){let k=i,m=n;
+ if(l.wings>1){const seg=Math.ceil(n/l.wings),w=Math.floor(i/seg);let j=i%seg;if(w%2)j=seg-1-j;k=j;m=seg}
+ if(l.blocks>1){k=Math.floor(k/l.blocks);m=Math.ceil(m/l.blocks)}
+ if(l.groups>1){k=k%l.groups;m=Math.min(m,l.groups)}
+ const span=l.phTo-l.phFrom,full=Math.abs(span)%360===0;
+ return (l.phFrom+span*(m>1?k/(full?m:m-1):0))/360}
+function fX(l,i,n,t){let c=t*l.speed*l.rate/60;if(l.dir==='<')c=-c;
+ let x=c-fPos(i,n,l);if(l.dir==='<>'){const b=Math.floor(c);x=frac(x);if(b%2)x=1-x;return{x,cyc:b}}return{x:frac(x),cyc:Math.floor(x)}}
+function fVal(l,i,n,t,f){const {x,cyc}=fX(l,i,n,t),v=fForm(l,x,cyc*31+f);
+ if(l.attr==='Color')return mix(S.presets[l.cLow]?.g?.col||'#ff3b30',S.presets[l.cHigh]?.g?.col||'#2f6bff',v);
+ return l.low+(l.high-l.low)*v}
+function mix(a,b,v){const h=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));const A=h(a),B=h(b);return'#'+A.map((x,i)=>Math.round(x+(B[i]-x)*v).toString(16).padStart(2,'0')).join('')}
+const getEff=r=>r.inline||(r.ref==='edit'?FX.e:S.effects[r.ref]);
+function activeRuns(){let r=S.blind?[]:S.fxRun.slice();if(S.exec.on&&S.exec.cur&&S.cues[S.exec.cur]&&S.cues[S.exec.cur].fx)r=S.cues[S.exec.cur].fx.concat(r);return r}
+const hex2=a=>Math.round(Math.max(0,Math.min(1,a))*255).toString(16).padStart(2,'0');
+let rafOn=false;
+function kick(){if(!rafOn){rafOn=true;requestAnimationFrame(tick)}}
+function tick(ts){rafOn=false;const t=ts/1000,runs=activeRuns(),nodes=$('stage').children;
+ if(!S.freeze&&nodes.length===N){const fv={};
+  runs.forEach(r=>{const e=getEff(r);if(!e)return;e.lines.forEach(l=>r.ids.forEach((f,i)=>{(fv[f]||(fv[f]={}))[l.attr]=fVal(l,i,r.ids.length,t,f)}))});
+  const act=S.step!=null?[S.sel[S.step]]:S.sel;
+  for(let f=1;f<=N;f++){const v=fv[f];if(!v)continue;if(S.highlt&&act.includes(f))continue;const o=out(f);
+   if(v.Dimmer!=null)o.dim=v.Dimmer;if(v.Color)o.col=v.Color;if(v.Pan!=null)o.pan=v.Pan;paint(nodes[f-1],o)}}
+ drawWave(t);
+ if(runs.length||!$('fxEd').classList.contains('hide')){rafOn=true;requestAnimationFrame(tick)}}
+
+/* ================= PARSER ================= */
+function resolve(kw,a,b){if(kw==='Group'){let r=[];for(let g=a;g<=b;g++)if(S.groups[g])r=r.concat(S.groups[g].ids);else throw'Group '+g+' existiert nicht';return r}
+ return range(Math.max(1,a),Math.min(N,b))}
+function parseSel(t,i){let set=[],mode='+',kw='Fixture',any=false;
+ while(i<t.length){const x=t[i];
+  if(['Fixture','Channel','Group'].includes(x)){kw=x;i++;continue}
+  if(x==='+'||x==='-'){mode=x;i++;continue}
+  if(x==='If'){const r=parseSel(t,i+1);set=set.filter(f=>r.set.includes(f));i=r.i;break}
+  if(x==='Thru'&&!any){const b=t[i+1]&&isNum(t[i+1])?parseInt(t[i+1]):N;set=resolve(kw,1,b);i+=2;any=true;continue}
+  if(isNum(x)){let a=parseInt(x),b=a;
+   if(t[i+1]==='Thru'){if(t[i+2]&&isNum(t[i+2])){b=parseInt(t[i+2]);i+=3}else{b=kw==='Group'?a:N;i+=2}}else i++;
+   const ids=resolve(kw,Math.min(a,b),Math.max(a,b));
+   if(mode==='+')ids.forEach(f=>{if(!set.includes(f))set.push(f)});else set=set.filter(f=>!ids.includes(f));any=true;continue}
+  break}
+ if(!any)throw'Keine Nummer angegeben';return{set,i}}
+function applyPreset(id,ids){const p=S.presets[id];if(!p)throw'Preset '+id+' existiert nicht';
+ if(!ids.length)throw'Keine Geräte ausgewählt';
+ setP(ids,(q,f,i)=>{let v=p.g||p.v[f];if(p.fn)v=p.fn(i,ids.length,f);if(!v)return;ATK.forEach(k=>{if(v[k]!=null)q[k]=v[k]})});return'Preset '+id+' ('+p.name+') auf '+ids.length+' Geräte'}
+function applyVal(t,i,ids){if(!ids.length)throw'Keine Geräte ausgewählt';const x=t[i];
+ if(x==='Full'){setP(ids,p=>p.dim=100);return'Dimmer 100 %'}
+ if(x==='Preset'&&isNum(t[i+1]))return applyPreset(t[i+1],ids);
+ if((x==='+'||x==='-')&&isNum(t[i+1])){const d=parseFloat(t[i+1])*(x==='+'?1:-1);setP(ids,(p,f)=>p.dim=Math.max(0,Math.min(100,(p.dim??out(f).dim)+d)));return'Relativ '+(d>0?'+':'')+d+' %'}
+ if(isNum(x)){const a=Math.min(100,parseFloat(x));
+  if(t[i+1]==='Thru'&&isNum(t[i+2])){const b=Math.min(100,parseFloat(t[i+2]));setP(ids,(p,f,k)=>p.dim=Math.round(a+(b-a)*(ids.length>1?k/(ids.length-1):0)));return'Aufgefächert '+a+' → '+b+' %'}
+  setP(ids,p=>p.dim=a);return'Dimmer '+a+' %'}
+ throw'Nach At fehlt ein Wert'}
+const numAt=(t,i,kw)=>{if(t[i]!==kw||!isNum(t[i+1]))throw'Erwartet: '+kw+' + Nummer';return t[i+1]};
+function storeCue(n){const ex=!!S.cues[n],vals=look();S.cues[n]={name:ex?S.cues[n].name:'',vals,fx:S.fxRun.map(r=>({inline:clone(getEff(r)),ids:[...r.ids]}))};
+ return'Cue '+n+(ex?' überschrieben (die echte Konsole fragt hier: Overwrite / Merge / Remove)':' gespeichert')}
+function run(t){if(!t.length)return'';
+ if(isNum(t[0]))t=['Fixture',...t];
+ const c=t[0];
+ if(['Fixture','Channel','Group'].includes(c)){const r=parseSel(t,0);S.sel=r.set;S.step=null;let m=r.set.length+' Geräte ausgewählt: '+r.set.join(', ');
+  if(r.i<t.length){if(t[r.i]==='At')m=applyVal(t,r.i+1,S.sel);else if(t[r.i]==='Preset')m=applyPreset(t[r.i+1],S.sel);else if(t[r.i]==='Effect')m=doEffect(t[r.i+1]);else throw'Unbekannter Befehlsteil: '+t[r.i]}
+  return m}
+ if(c==='At')return applyVal(t,1,S.sel);
+ if(c==='Preset'&&isNum(t[1]))return applyPreset(t[1],S.sel);
+ if(c==='Effect'&&isNum(t[1]))return doEffect(t[1]);
+ if(c==='Store'){if(t.length===1){const ks=cueKeys(),n=ks.length?String(Math.floor(parseFloat(ks[ks.length-1]))+1):'1';return storeCue(n)}
+  if(t[1]==='Cue')return storeCue(numAt(t,1,'Cue'));
+  if(t[1]==='Group'){const n=numAt(t,1,'Group');if(!S.sel.length)throw'Nichts ausgewählt – erst Geräte wählen';const ex=S.groups[n];S.groups[n]={name:ex?ex.name:'',ids:[...S.sel]};return'Group '+n+' gespeichert ('+S.sel.length+' Geräte)'}
+  if(t[1]==='Preset'){const n=numAt(t,1,'Preset'),ty=n.split('.')[0];if(!S.sel.length)throw'Nichts ausgewählt';const v={};
+   const KS={1:['dim'],2:['pan','tilt'],3:['gobo'],4:['col'],6:['zoom']}[ty]||ATK;S.sel.forEach(f=>{const o=out(f),p=S.prog[f];if(!p)return;const x={};KS.forEach(k=>{if(p[k]!=null&&!p.ina)x[k]=p[k]});if(Object.keys(x).length)v[f]=x});
+   if(!Object.keys(v).length)throw'Keine passenden Werte im Programmer';S.presets[n]={name:'Preset '+n,v};return'Preset '+n+' gespeichert'}
+  if(t[1]==='Effect'){const n=numAt(t,1,'Effect');if(!FX.e)loadFx('1');const ex=!!S.effects[n];S.effects[n]=clone(FX.e);FX.id=n;FX.isNew=false;return'Effekt aus dem Editor als Effect '+n+(ex?' überschrieben':' gespeichert')}
+  if(t[1]==='View')return'View '+(t[2]||'')+' gespeichert (Bildschirm-Layout)';
+  throw'Was soll gespeichert werden?'}
+ if(c==='Update'){const n=t[1]==='Cue'?t[2]:S.exec.cur;if(!n||!S.cues[n])throw'Kein aktiver Cue zum Updaten';
+  const v=S.cues[n].vals;for(const f in S.prog){const p=S.prog[f];if(p.ina)continue;v[f]=v[f]||{...DEF};ATK.forEach(k=>{if(p[k]!=null)v[f][k]=p[k]})}if(S.fxRun.length)S.cues[n].fx=(S.cues[n].fx||[]).concat(S.fxRun.map(r=>({inline:clone(getEff(r)),ids:[...r.ids]})));return'Cue '+n+' aktualisiert'}
+ if(c==='Edit'&&t[1]==='Effect'){const n=numAt(t,1,'Effect');loadFx(n);if(!(mode==='learn'&&L[li].fx)&&mode!=='fx')setTimeout(()=>setMode('fx'),0);return'Effekt '+n+' im Effekt-Editor geöffnet'}
+ if(c==='Edit'){if(!t[1])throw'Was soll bearbeitet werden?';return t.slice(1).join(' ')+' im Editor geöffnet (auf der Konsole öffnet sich ein Fenster)'}
+ if(c==='Delete'){const n=t[2];if(t[1]==='Cue'){if(!S.cues[n])throw'Cue '+n+' gibt es nicht';delete S.cues[n];if(S.exec.cur===n)S.exec.cur=null;return'Cue '+n+' gelöscht'}
+  if(t[1]==='Group'){if(!S.groups[n])throw'Group '+n+' gibt es nicht';delete S.groups[n];return'Group '+n+' gelöscht'}
+  if(t[1]==='Effect'){if(!S.effects[n])throw'Effekt '+n+' gibt es nicht';delete S.effects[n];S.fxRun=S.fxRun.filter(r=>r.ref!==n);if(FX.id===n){FX.id=null;FX.isNew=true}return'Effekt '+n+' gelöscht'}
+  if(t[1]==='Preset'){if(!S.presets[n])throw'Preset '+n+' gibt es nicht';delete S.presets[n];return'Preset '+n+' gelöscht'}throw'Was soll gelöscht werden?'}
+ if(c==='Copy'||c==='Move'){const ob=t[1],a=t[2];if(t[3]!=='At'||!isNum(t[4]||''))throw'Syntax: '+c+' Cue 1 At 5';const b=t[4];
+  const pool=ob==='Cue'?S.cues:ob==='Group'?S.groups:ob==='Effect'?S.effects:null;if(!pool)throw'Im Simulator nur mit Cue, Group oder Effect';if(!pool[a])throw ob+' '+a+' gibt es nicht';
+  pool[b]=clone(pool[a]);if(c==='Move'){delete pool[a];if(ob==='Cue'&&S.exec.cur===a)S.exec.cur=b}return ob+' '+a+(c==='Copy'?' kopiert nach ':' verschoben nach ')+b}
+ if(c==='Assign'){if(t[1]==='Sequence'&&t[3]==='At'&&t[4]==='Executor'){S.exec.seq=+t[2];return'Sequenz '+t[2]+' liegt jetzt auf Executor '+t[5]}throw'Syntax: Assign Sequence 1 At Executor 1'}
+ if(c==='Label'){if(!t[1]||!t[2])throw'Syntax: Label Group 1';openLabel(t[1],t[2]);return'Namensfenster geöffnet'}
+ if(c==='Goto'){const n=numAt(t,1,'Cue');if(!S.cues[n])throw'Cue '+n+' gibt es nicht';S.exec.on=true;S.exec.cur=n;return'Goto Cue '+n}
+ if(c==='Off'){if(t[1]==='Effect'){S.fxRun=t[2]?S.fxRun.filter(r=>r.ref!==t[2]):[];return'Effekt aus'}S.exec.on=false;return'Executor '+(t[2]||1)+' aus'}
+ if(c==='On'){S.exec.on=true;if(!S.exec.cur)S.exec.cur=cueKeys()[0]||null;return'Executor '+(t[2]||1)+' an'}
+ if(['Go+','Go-','Top','Pause'].includes(c))return pb(c);
+ if(['Temp','Select','Fix'].includes(c))return c+' '+(t.slice(1).join(' ')||'')+' – im Simulator nur angezeigt';
+ if(c==='Macro')return macro(t[1]);
+ if(c==='Page'){if(!isNum(t[1]||''))throw'Syntax: Page 2';S.page=+t[1];return'Executor-Seite '+t[1]}
+ if(c==='View')return'View '+(t[1]||'')+' aufgerufen';
+ throw'Befehl nicht erkannt'}
+function doEffect(n){if(!S.sel.length)throw'Keine Geräte ausgewählt';if(!S.effects[n])throw'Effekt '+n+' gibt es nicht (siehe Effekt-Pool)';S.fxRun=S.fxRun.filter(r=>r.ref!==n);S.fxRun.push({ref:n,ids:[...S.sel]});return'Effekt '+n+' ('+S.effects[n].name+') auf '+S.sel.length+' Geräte'}
+function pb(c){const ks=cueKeys();if(!ks.length)throw'Keine Cues vorhanden';const i=ks.indexOf(S.exec.cur);
+ if(c==='Go+'){if(!S.exec.on||i<0){S.exec.on=true;S.exec.cur=ks[0]}else S.exec.cur=ks[(i+1)%ks.length];return'Go+ → Cue '+S.exec.cur}
+ if(c==='Go-'){S.exec.on=true;S.exec.cur=ks[i<=0?ks.length-1:i-1];return'Go- → Cue '+S.exec.cur}
+ if(c==='Top'){S.exec.on=true;S.exec.cur=ks[0];return'Top → Cue '+ks[0]}
+ return'Pause: Fade angehalten'}
+function macro(n){if(n==='1'){setP(range(1,12),p=>{p.dim=100;p.col='#ffffff'});S.sel=range(1,12);return'Makro 1: alle weiß auf Full'}
+ if(n==='2'){const c=['#ff3b30','#ffb000','#ffe600','#34c759','#00e5ff','#2f6bff','#8e44ff','#ff2fd0'];setP(range(1,12),(p,f,i)=>{p.dim=100;p.col=c[i%c.length]});return'Makro 2: Regenbogen'}
+ if(n==='3'){S.prog={};S.sel=[];S.fxRun=[];S.step=null;return'Makro 3: Programmer geleert'}throw'Makro '+n+' gibt es nicht (1–3)'}
+function ensureCues(){if(cueKeys().length>=2)return;
+ const mk=(fn)=>{const v={};for(let f=1;f<=N;f++)v[f]=fn(f);return v};
+ S.cues={'1':{name:'Vorstellung',vals:mk(f=>({dim:f<=6?100:0,col:WARM}))},'2':{name:'Song 1',vals:mk(f=>({dim:f>6?70:0,col:WARM}))},'3':{name:'Blau',vals:mk(()=>({dim:80,col:'#2f6bff'}))}};
+ msg('Für diese Lektion wurden Demo-Cues 1–3 angelegt.','')}
+
+/* ================= EINGABE ================= */
+const disp=()=>tok.join(' ');
+function renderCmd(){const pr=S.sel.length?'[Fixture]>':'[Channel]>';$('cmd').innerHTML=`<span class="pr">${pr}</span> ${esc(disp())}<span class="cu"></span>`}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function msg(m,cls){const e=$('fb');e.textContent=m;e.className='fb '+(cls||'')}
+function snap(){undo.push(JSON.stringify(S));if(undo.length>60)undo.shift()}
+function kinfo(k){$('kinfo').innerHTML=`<b>${esc(k)}</b> – ${esc(D[k]||'')}`}
+
+function press(k){
+ if(luaBusy){msg('Plugin läuft noch … kurz warten.');return}
+ kinfo(k);flash(k);
+ if(mode==='quiz'){quizAnswer(k);return}
+ if(helpNext&&k!=='Help'){helpNext=false;msg('Hilfe zu '+k+' – siehe Erklärung unten.','ok');return}
+ const task=curTask();
+ if(mode==='learn'&&task&&task.type==='find'){if(k===task.key){taskDone()}else msg('Das war '+k+'. Gesucht ist eine andere Taste – lies die Erklärung unten.','err');if($('helpBox').classList.contains('show'))setTimeout(showHelp,0);return}
+ streak=streak.k===k?{k,n:streak.n+1}:{k,n:1};
+ if(k!=='Clear')clearStage=0;if(k!=='Backup')backupN=0;
+ doKey(k);
+ if($('helpBox').classList.contains('show'))setTimeout(showHelp,0);else pointKey(null);
+ if(mode==='learn'&&task&&task.type==='press'&&k===task.key&&streak.n>=task.count){streak={k:null,n:0};taskDone()}
+ render()}
+function doKey(k){
+ if(/^\d$/.test(k)||k==='.'){const l=tok[tok.length-1];if(l!=null&&/^[\d.]+$/.test(l))tok[tok.length-1]=l+k;else tok.push(k);return renderCmd()}
+ switch(k){
+ case'Please':return please();
+ case'Esc':tok=[];msg('Command Line gelöscht.');return renderCmd();
+ case'Oops':if(tok.length){const l=tok[tok.length-1];if(/^[\d.]+$/.test(l)&&l.length>1)tok[tok.length-1]=l.slice(0,-1);else tok.pop();msg('Oops: letzte Eingabe entfernt.')}else if(undo.length){S=JSON.parse(undo.pop());fixFns();msg('Oops: letzter Befehl rückgängig gemacht.','ok')}else msg('Nichts zum Rückgängigmachen.');return renderCmd();
+ case'Clear':if(tok.length){tok=[];msg('Command Line geleert.');return renderCmd()}
+  snap();clearStage++;
+  if(S.sel.length&&clearStage===1){S.sel=[];S.step=null;msg('Clear 1: Auswahl aufgehoben (Clear Selection).','ok')}
+  else if(Object.values(S.prog).some(p=>!p.ina)&&clearStage<=2){for(const f in S.prog)S.prog[f].ina=true;S.sel=[];msg('Clear 2: Werte deaktiviert (Clear Active).','ok');clearStage=2}
+  else{S.prog={};S.sel=[];S.step=null;S.fxRun=[];msg('Clear 3: Programmer leer (Clear All).','ok');clearStage=0}
+  return renderCmd();
+ case'Full':if(tok[tok.length-1]!=='At')tok.push('At');tok.push('Full');return renderCmd();
+ case'Help':helpNext=true;msg('Help: Drück jetzt eine Taste, um ihre Erklärung zu sehen.');return;
+ case'Backup':backupN++;msg(backupN>=2?'Show gespeichert (Quick Save). ✔':'Backup-Menü geöffnet. Nochmal drücken = schnell speichern.',backupN>=2?'ok':'');return;
+ case'Setup':case'Tools':return msg(k+'-Menü geöffnet (im Simulator nur angezeigt).');
+ case'List':return msg('Cues: '+(cueKeys().join(', ')||'keine')+' · Groups: '+Object.keys(S.groups).join(', '));
+ case'Learn':return msg('Learn: Tempo wird aus deinem Tippen gelernt.');
+ case'Set':return msg('Set: Werteingabe geöffnet.');
+ case'MA':return msg('MA gedrückt – auf der Konsole jetzt mit einer zweiten Taste kombinieren.');
+ case'Align':return msg('Align-Modus gewechselt (wirkt beim Drehen der Encoder).');
+ case'Prvw':return msg('Preview: Vorschau-Modus (keine Ausgabe).');
+ case'Highlt':S.highlt=!S.highlt;return msg('Highlight '+(S.highlt?'an':'aus'),'ok');
+ case'Solo':S.solo=!S.solo;return msg('Solo '+(S.solo?'an':'aus'),'ok');
+ case'Blind':S.blind=!S.blind;return msg('Blind '+(S.blind?'an – Programmer wird nicht ausgegeben':'aus'),'ok');
+ case'Freeze':S.freeze=!S.freeze;S.frozen=S.freeze?stageVals():null;return msg('Freeze '+(S.freeze?'an':'aus'),'ok');
+ case'Next':case'Prev':if(!S.sel.length)return msg('Erst Geräte auswählen.','err');
+  S.step=S.step==null?(k==='Next'?0:S.sel.length-1):(S.step+(k==='Next'?1:-1)+S.sel.length)%S.sel.length;return msg(k+': Fixture '+S.sel[S.step],'ok');
+ }
+ if(['Go+','Go-','Pause','Top'].includes(k)&&!tok.length){snap();try{msg(pb(k),'ok')}catch(e){msg(e,'err')}return}
+ tok.push(TOK[k]||k);renderCmd()}
+function please(){const str=disp();if(!tok.length)return;const task=curTask();
+ let ok=false;if(mode==='learn'&&task&&task.type==='cmd')ok=task.expect.some(e=>norm(e)===norm(str));
+ snap();try{const m=run([...tok]);msg(str+' → '+m,'ok')}catch(e){undo.pop();msg(str+' → Fehler: '+e,'err')}
+ tok=[];renderCmd();if(!$('fxEd').classList.contains('hide'))renderFx();
+ if(mode==='learn'&&task&&task.type==='cmd'){if(ok)taskDone();else{task.miss=(task.miss||0)+1;renderLesson()}}}
+const norm=s=>s.toLowerCase().replace(/\s+/g,' ').trim();
+function flash(k){const b=document.querySelector(`.k[data-k="${CSS.escape(k)}"]`);if(b){b.classList.add('hit');setTimeout(()=>b.classList.remove('hit'),120)}}
+
+/* ================= DARSTELLUNG ================= */
+const GOBO={open:'none',dots:'radial-gradient(circle,#000 38%,transparent 42%)',stripes:'repeating-linear-gradient(90deg,#000 0 4px,transparent 4px 9px)',star:'repeating-conic-gradient(from 0deg at 50% 0%,#000 0 5deg,transparent 5deg 13deg)'};
+function paint(nd,o){const a=o.dim/100,lp=nd.children[0],bm=nd.children[1],c=o.col||WARM;
+ lp.style.background=a?c:'#111';lp.style.opacity=.25+a*.75;lp.style.boxShadow=`0 0 ${a*22}px ${a*6}px ${c}${hex2(a*.6)}`;
+ bm.style.background=`linear-gradient(${c}${hex2(a*.5)},transparent)`;
+ const sp=6+(o.zoom??50)*.44;bm.style.clipPath=`polygon(42% 0,58% 0,${50+sp}% 100%,${50-sp}% 100%)`;
+ bm.style.transform=`rotate(${((o.pan??50)-50)*.8}deg) scaleY(${.45+(o.tilt??50)*.0075})`;
+ const g=GOBO[o.gobo||'open'];bm.style.webkitMaskImage=bm.style.maskImage=g;const sz=o.gobo==='dots'?'9px 9px':'auto';bm.style.webkitMaskSize=bm.style.maskSize=sz}
+function stageVals(){const r={};for(let f=1;f<=N;f++)r[f]=out(f);return r}
+function render(){const vals=S.freeze&&S.frozen?S.frozen:stageVals();
+ $('stage').innerHTML=range(1,N).map(f=>{const o=vals[f],p=S.prog[f],sel=S.sel.includes(f),st=S.step!=null&&S.sel[S.step]===f;
+  const v=p&&p.dim!=null?`<span class="v ${p.ina?'in':'p'}">${Math.round(p.dim)}</span>`:`<span class="v">${o.dim?Math.round(o.dim):''}</span>`;
+  return `<div class="fix${sel?' sel':''}${st?' step':''}"><div class="lamp"></div><div class="beam"></div><span>${f}</span>${v}</div>`}).join('');
+ const nds=$('stage').children;for(let f=1;f<=N;f++)paint(nds[f-1],vals[f]);
+ kick();renderEnc();setTimeout(fxCheck,0);
+ $('badges').innerHTML=[S.blind&&'BLIND',S.freeze&&'FREEZE',S.highlt&&'HIGHLT',S.solo&&'SOLO'].filter(Boolean).map(b=>`<span>${b}</span>`).join('');
+ $('iExec').innerHTML=`<span>${S.exec.on?'<b style="color:#3ddc84;display:inline">AN</b>':'aus'} · Page ${S.page}</span><span>Cue: ${S.exec.cur??'–'}</span>`;
+ $('iCues').innerHTML=cueKeys().map(k=>`<span class="${S.exec.on&&S.exec.cur===k?'cur':''}">${k}${S.cues[k].name?' '+esc(S.cues[k].name):''}</span>`).join('')||'<span>keine</span>';
+ $('iGroups').innerHTML=Object.keys(S.groups).map(k=>`<span>${k} ${esc(S.groups[k].name||'')}</span>`).join('');
+ $('iPresets').innerHTML=Object.keys(S.presets).sort().map(k=>{const p=S.presets[k];return `<span>${k}${p.g?` <i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.g.col}"></i>`:''}</span>`}).join('');
+ renderCmd()}
+function buildDesk(){$('desk').innerHTML=BLOCKS.map(b=>`<div class="blk"><h4>${b.n}</h4><div class="keys">${b.k.map(k=>{const c=OBJ.includes(k)?'obj':PB.includes(k)?'pb':MODE.includes(k)?'mode':'';const n=/^[\d.+-]$/.test(k)||k==='Thru'?'num':'';return `<button class="k ${c} ${n} ${k==='Please'?'please':''}" data-k="${esc(k)}" aria-label="Taste ${esc(k)}">${esc(k)}</button>`}).join('')}</div></div>`).join('');
+ let lastTap=0;const hit=e=>{const b=e.target.closest&&e.target.closest('.k');if(!b)return;const now=Date.now();if(e.type==='click'&&now-lastTap<600)return;if(e.type!=='click'){lastTap=now;if(e.cancelable)e.preventDefault()}try{press(b.dataset.k)}catch(err){msg('Fehler: '+err,'err')}};
+ if(window.PointerEvent)$('desk').addEventListener('pointerdown',hit);else $('desk').addEventListener('touchstart',hit,{passive:false});
+ $('desk').addEventListener('click',hit)}
+
+/* ================= EFFEKT-EDITOR ================= */
+const FX={id:'1',e:null,line:0,isNew:false};
+const INFO={attr:'Welches Attribut die Zeile bewegt. Auf der echten Konsole kann das fast jedes Attribut sein (Dimmer, Pan, Tilt, Farbe, Zoom …). Ein Effekt kann mehrere Zeilen haben, jede Zeile bewegt ein Attribut.',
+form:'Die Kurvenform, mit der der Wert zwischen Low und High pendelt. Sinus = weich, PWM = hart an/aus, Rampe = Sägezahn, Chase = kurzer Buckel, Stufen = treppig, Zufall = jedes Mal anders.',
+speed:'Geschwindigkeit in BPM (Durchläufe pro Minute). 60 BPM = ein Durchlauf pro Sekunde.',
+rate:'Multiplikator auf Speed: ½ = halb so schnell, 2 = doppelt so schnell. Praktisch, um nur das Verhältnis zu ändern.',
+low:'Unterer Wert. Der Effekt pendelt zwischen Low und High.',high:'Oberer Wert. Der Effekt pendelt zwischen Low und High.',
+cLow:'Farbe für den Low-Wert.',cHigh:'Farbe für den High-Wert. Dazwischen wird gemischt.',
+phFrom:'Phase = Versatz zwischen den Geräten (in Grad). Phase 0 bis 0 = alle gleichzeitig. 0 bis 360 = gleichmäßig verteilt, das ergibt eine Welle oder ein Lauflicht. 0 bis 180 = nur eine halbe Welle.',
+phTo:'Endwert der Phase. Die Geräte bekommen die Phasen von „Phase von“ bis „Phase bis“ verteilt, wie beim Auffächern mit Thru.',
+width:'Wie lange der Effekt pro Durchlauf aktiv ist. Kleine Width = kurze Blitze mit langen Pausen. Bei PWM ist es das Verhältnis an/aus.',
+groups:'Nach wie vielen Geräten sich die Phase wiederholt. Groups 4 bei 12 Geräten = drei gleiche Wellen nebeneinander. 0 = aus.',
+blocks:'Wie viele benachbarte Geräte genau dasselbe machen. Blocks 3 = immer 3 Geräte als Block. 0 = aus.',
+wings:'Spiegelt die Phase. Wings 2 = linke und rechte Hälfte laufen spiegelbildlich, z. B. von außen nach innen. 0 = aus.',
+dir:'Laufrichtung: vorwärts, rückwärts oder hin und her (Bounce).'};
+function loadFx(n){if(!S.effects[n])throw'Effekt '+n+' gibt es nicht';FX.id=String(n);FX.e=clone(S.effects[n]);FX.line=0;FX.isNew=false;if(editRun())editRun().ids=playIds()}
+const editRun=()=>S.fxRun.find(r=>r.ref==='edit');
+const playIds=()=>S.sel.length?[...S.sel]:range(1,N);
+const nextFree=()=>{let n=1;while(S.effects[n])n++;return n};
+function prmRow(k,label,ctl){return`<div class="prm" data-ctl="${k}"><label><button class="q" data-info="${k}" aria-label="Erklärung ${esc(label)}">?</button>${esc(label)}</label>${ctl}</div>`}
+const rng=(k,v,min,max,st,unit)=>prmRow(k,{speed:'Speed',low:'Low',high:'High',phFrom:'Phase von',phTo:'Phase bis',width:'Width',groups:'Groups',blocks:'Blocks',wings:'Wings'}[k],`<input type="range" data-p="${k}" min="${min}" max="${max}" step="${st}" value="${v}" aria-label="${k}"><output id="o_${k}">${fmt(k,v)}</output>`);
+const fmt=(k,v)=>k==='speed'?v+' BPM':k.startsWith('ph')?v+'°':(k==='low'||k==='high'||k==='width')?v+' %':(+v===0?'aus':v);
+const sel=(k,label,opts,v)=>prmRow(k,label,`<select data-p="${k}" style="grid-column:span 2">${Object.entries(opts).map(([a,b])=>`<option value="${esc(a)}"${a==v?' selected':''}>${esc(b)}</option>`).join('')}</select>`);
+function renderFx(){if(!FX.e)loadFx('1');const e=FX.e;if(FX.line>=e.lines.length)FX.line=e.lines.length-1;const l=e.lines[FX.line];
+ $('fxPool').innerHTML=Object.keys(S.effects).sort((a,b)=>a-b).map(n=>`<button data-load="${n}" data-ctl="pool${n}" class="${FX.id===n&&!FX.isNew?'on':''}"><b>Effect ${n}</b>${esc(S.effects[n].name||'')}</button>`).join('');
+ if(document.activeElement!==$('fxName'))$('fxName').value=e.name||'';
+ if(document.activeElement!==$('fxNum'))$('fxNum').value=FX.id&&!FX.isNew?FX.id:nextFree();
+ $('fxLines').innerHTML=e.lines.map((x,i)=>`<tr data-line="${i}" class="${i===FX.line?'on':''}"><td>${i+1}</td><td>${esc(ATTRS[x.attr])}</td><td>${esc(FORMS[x.form])}</td><td>${x.speed}</td><td>${x.phFrom}…${x.phTo}</td><td>${x.width}</td></tr>`).join('');
+ const cols={};for(const k in COLS)cols[k]=k+' '+COLS[k][0];
+ $('fxParams').innerHTML=sel('attr','Attribut',ATTRS,l.attr)+sel('form','Form',FORMS,l.form)+rng('speed',l.speed,5,240,1)+sel('rate','Rate',{0.25:'¼',0.5:'½',1:'1',2:'2',4:'4'},l.rate)
+  +(l.attr==='Color'?sel('cLow','Low',cols,l.cLow)+sel('cHigh','High',cols,l.cHigh):rng('low',l.low,0,100,1)+rng('high',l.high,0,100,1))
+  +rng('phFrom',l.phFrom,-360,720,15)+rng('phTo',l.phTo,-360,720,15)+rng('width',l.width,5,100,1)+rng('groups',l.groups,0,12,1)+rng('blocks',l.blocks,0,12,1)+rng('wings',l.wings,0,6,1)+sel('dir','Dir',DIRS,l.dir);
+ $('fxPlay').textContent=editRun()?'■ Stopp':'▶ Abspielen';kick();fxCheck()}
+function drawWave(t){const sv=$('fxWave');if(!FX.e||$('fxEd').classList.contains('hide'))return;const l=FX.e.lines[FX.line];if(!l)return;
+ const W=400,H=140,X=x=>14+x*(W-28),Y=v=>H-22-v*(H-44);let d='';for(let i=0;i<=120;i++){const x=i/120;d+=(i?'L':'M')+X(x).toFixed(1)+' '+Y(fForm(l,x,Math.floor(i/30)*7)).toFixed(1)}
+ const r=editRun(),ids=r?r.ids:playIds(),n=ids.length;
+ const dots=ids.map((f,i)=>{const {x,cyc}=r?fX(l,i,n,t):{x:frac(-fPos(i,n,l)),cyc:0};const v=fForm(l,x,cyc*31+f);return`<circle cx="${X(x).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="7" fill="#ffd400"/><text x="${X(x).toFixed(1)}" y="${(Y(v)+4).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="#000" font-family="JetBrains Mono,monospace">${f}</text>`}).join('');
+ const lo=l.attr==='Color'?(COLS[l.cLow]||['Low'])[0]:'Low '+l.low,hi=l.attr==='Color'?(COLS[l.cHigh]||['High'])[0]:'High '+l.high;
+ sv.innerHTML=`<line x1="14" x2="386" y1="${Y(0)}" y2="${Y(0)}" stroke="#333"/><line x1="14" x2="386" y1="${Y(1)}" y2="${Y(1)}" stroke="#333"/><text x="16" y="${Y(1)-6}" font-size="11" fill="#9aa1a9" font-family="Archivo,sans-serif">${esc(hi)}</text><text x="16" y="${Y(0)+16}" font-size="11" fill="#9aa1a9" font-family="Archivo,sans-serif">${esc(lo)}</text><text x="386" y="${Y(0)+16}" text-anchor="end" font-size="11" fill="#9aa1a9" font-family="Archivo,sans-serif">${r?'läuft':'gestoppt'} · ${esc(FORMS[l.form])}</text><path d="${d}" fill="none" stroke="#20d3e8" stroke-width="2.5"/>${dots}`}
+function fxPlay(){snap();const r=editRun();if(r){S.fxRun=S.fxRun.filter(x=>x!==r);msg('Effekt gestoppt.')}else{const ids=playIds();
+  if(!FX.e.lines.some(l=>l.attr==='Dimmer'))ids.forEach(f=>{if(out(f).dim===0){(S.prog[f]||(S.prog[f]={})).dim=100;S.prog[f].ina=false}});
+  S.fxRun.push({ref:'edit',ids});msg('Effekt läuft auf '+ids.length+' Geräten'+(S.sel.length?'':' (keine Auswahl → alle)')+'.','ok')}render();renderFx()}
+function fxStore(){const n=String(parseInt($('fxNum').value)||nextFree());const ex=!!S.effects[n];snap();S.effects[n]=clone(FX.e);FX.id=n;FX.isNew=false;
+ msg('Store Effect '+n+' → Effekt '+n+' '+(ex?'überschrieben':'gespeichert')+'. Abrufen mit Auswahl + Effect '+n+'.','ok');render();renderFx()}
+function fxEvt(e){const b=e.target.closest('button');
+ if(b){const a=b.dataset.act;
+  if(b.dataset.info){$('fxInfo').innerHTML='<b>'+esc(b.parentElement.textContent.replace('?','').trim())+':</b> '+esc(INFO[b.dataset.info]);return}
+  if(b.dataset.load){loadFx(b.dataset.load);msg('Effekt '+b.dataset.load+' im Editor (wie Edit Effect '+b.dataset.load+').');renderFx();return}
+  if(a==='new'){FX.e={name:'Neuer Effekt',lines:[newLine()]};FX.id=null;FX.isNew=true;FX.line=0;msg('Neuer Effekt angelegt – stell die Werte ein und speichere ihn.');renderFx();return}
+  if(a==='addline'){FX.e.lines.push(newLine(FX.e.lines.some(l=>l.attr==='Dimmer')?'Color':'Dimmer'));FX.line=FX.e.lines.length-1;renderFx();return}
+  if(a==='delline'){if(FX.e.lines.length>1){FX.e.lines.splice(FX.line,1);FX.line=Math.max(0,FX.line-1);renderFx()}else msg('Ein Effekt braucht mindestens eine Zeile.','err');return}
+  if(a==='play')return fxPlay();if(a==='store')return fxStore()}
+ const tr=e.target.closest('tr[data-line]');if(tr){FX.line=+tr.dataset.line;renderFx()}}
+$('fxEd').addEventListener('click',fxEvt);
+$('fxEd').addEventListener('input',e=>{const el=e.target;if(el.id==='fxName'){FX.e.name=el.value;return}const k=el.dataset.p;if(!k)return;const l=FX.e.lines[FX.line];
+ l[k]=['attr','form','dir','cLow','cHigh'].includes(k)?el.value:parseFloat(el.value);const o=$('o_'+k);if(o)o.textContent=fmt(k,l[k]);
+ if(el.tagName==='SELECT')renderFx();else{const row=$('fxLines').children[FX.line];if(row)row.innerHTML=`<td>${FX.line+1}</td><td>${esc(ATTRS[l.attr])}</td><td>${esc(FORMS[l.form])}</td><td>${l.speed}</td><td>${l.phFrom}…${l.phTo}</td><td>${l.width}</td>`;fxCheck()}
+ if(k==='phFrom'||k==='phTo'||k==='width'||k==='speed')$('fxInfo').innerHTML='<b>'+k+':</b> '+esc(INFO[k]);kick()});
+function placeFx(){const ed=$('fxEd'),inL=mode==='learn'&&L[li].fx;if(inL)$('lFx').appendChild(ed);else if(mode==='fx')$('fxSlot').appendChild(ed);
+ ed.classList.toggle('hide',!(inL||mode==='fx'));document.querySelector('main').classList.toggle('wide',!!(inL||mode==='fx'||mode==='lua'));if(inL||mode==='fx')renderFx()}
+let fxBusy=false;function fxCheck(){if(fxBusy)return;fxBusy=true;try{fxCheck0()}finally{fxBusy=false}}
+function fxCheck0(){if($('helpBox').classList.contains('show'))setTimeout(showHelp,0);if(mode!=='learn')return;const t=curTask();if(t&&t.type==='fx'&&t.check(FX)){taskDone();setTimeout(fxCheck,30)}}
+
+/* ================= ENCODER ================= */
+const LAYERS={Dimmer:['dim'],Position:['pan','tilt'],Gobo:['gobo'],Focus:['zoom']};
+const GOBOS=['open','dots','stripes','star'],GN={open:'Offen',dots:'Punkte',stripes:'Streifen',star:'Stern'};
+const ENAME={dim:'Dim',pan:'Pan',tilt:'Tilt',zoom:'Zoom',gobo:'Gobo'};
+const EINFO={dim:'Dimmer-Encoder: Helligkeit der Auswahl.',pan:'Pan-Encoder: dreht den Moving Head links/rechts (hier ±270°).',tilt:'Tilt-Encoder: neigt den Kopf nach vorne/hinten (hier ±135°). Auf der Bühne wird der Strahl länger.',zoom:'Zoom-Encoder (Feature-Gruppe Focus): Strahl eng (Spot) oder breit (Wash).',gobo:'Gobo-Encoder: wählt das Gobo-Rad, also ein Muster im Lichtstrahl.'};
+let encLayer='Dimmer';
+const encFmt=(k,v)=>v==null?'–':k==='pan'?Math.round((v-50)*5.4)+'°':k==='tilt'?Math.round((v-50)*2.7)+'°':k==='zoom'?Math.round(5+v*.5)+'°':k==='gobo'?GN[v]:Math.round(v)+' %';
+function renderEnc(){$('encLayers').innerHTML=Object.keys(LAYERS).map(l=>`<button data-layer="${l}" data-ctl="layer_${l}" class="${l===encLayer?'on':''}">${l}</button>`).join('');
+ const f=S.sel[0],o=f?out(f):null;
+ $('encKnobs').innerHTML=LAYERS[encLayer].map(k=>{const v=o?o[k]:null,ang=k==='gobo'?(GOBOS.indexOf(v)*90-135):((v??50)*2.7-135);
+  return`<div class="knob" data-ctl="enc_${k}"><button data-step="${k}" data-d="-1" aria-label="${ENAME[k]} runter">−</button><svg viewBox="0 0 54 54" data-knob="${k}" aria-label="${ENAME[k]}-Encoder drehen"><circle cx="27" cy="27" r="24" fill="#3a3e45" stroke="#555"/><circle cx="27" cy="27" r="17" fill="#2b2f35"/><line x1="27" y1="27" x2="27" y2="6" stroke="#20d3e8" stroke-width="4" stroke-linecap="round" transform="rotate(${ang} 27 27)"/></svg><button data-step="${k}" data-d="1" aria-label="${ENAME[k]} hoch">+</button><span class="kv"><b>${ENAME[k]}</b>${encFmt(k,v)}</span></div>`}).join('')}
+function encChange(k,d){if(!S.sel.length){msg('Erst Geräte auswählen (z. B. Fixture 1 Thru 12).','err');return}
+ setP(S.sel,(p,f)=>{const cur=p[k]!=null?p[k]:out(f)[k];if(k==='gobo'){const i=Math.max(0,Math.min(3,GOBOS.indexOf(cur)+Math.sign(d)));p.gobo=GOBOS[i]}else p[k]=Math.max(0,Math.min(100,(cur??50)+d))});
+ kinfo2(k);render()}
+const kinfo2=k=>{$('kinfo').innerHTML=`<b>${ENAME[k]}</b> – ${esc(EINFO[k])}`};
+$('enc').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.layer){encLayer=b.dataset.layer;$('kinfo').innerHTML=`<b>${encLayer}</b> – Encoder-Ebene (Feature-Gruppe). Auf der grandMA2 wählst du sie oben in der Encoder-Leiste.`;renderEnc();fxCheck();return}
+ if(b.dataset.step){snap();encChange(b.dataset.step,b.dataset.step==='gobo'?+b.dataset.d:5*b.dataset.d)}});
+let drag=null;
+$('enc').addEventListener('pointerdown',e=>{const k=e.target.closest('[data-knob]');if(!k)return;e.preventDefault();snap();drag={k:k.dataset.knob,x:e.clientX,y:e.clientY,acc:0};try{k.setPointerCapture(e.pointerId)}catch(_){}});
+$('enc').addEventListener('pointermove',e=>{if(!drag)return;const d=(e.clientX-drag.x)-(e.clientY-drag.y);drag.x=e.clientX;drag.y=e.clientY;
+ if(drag.k==='gobo'){drag.acc+=d;if(Math.abs(drag.acc)>28){encChange('gobo',Math.sign(drag.acc));drag.acc=0}}else if(d)encChange(drag.k,d*.4)});
+['pointerup','pointercancel'].forEach(t=>$('enc').addEventListener(t,()=>{drag=null}));
+
+/* ================= LUA: gma-API ================= */
+let luaBusy=false,luaTimers=[];
+function objFind(name){const m=String(name).trim().match(/^(\w+)\s+([\d.]+)$/i);if(!m)return null;const k=m[1].toLowerCase(),n=m[2];
+ const pick=(pool,label)=>pool[n]?{label:pool[n].name||label||''}:null;
+ if(k==='group')return pick(S.groups);if(k==='cue')return pick(S.cues);if(k==='preset')return pick(S.presets);if(k==='effect')return pick(S.effects);
+ if(k==='fixture'||k==='channel')return +n>=1&&+n<=N?{label:'Fixture '+n}:null;
+ if(k==='sequence'||k==='sequ')return n==='1'?{label:'Sequenz 1'}:null;if(k==='executor'||k==='exec')return n==='1'?{label:'Executor 1'}:null;return null}
+function gmaCmd(str){const out=[];str.split(';').forEach(part=>{let name=null;
+ const s=part.replace(/"([^"]*)"/g,(m,x)=>{name=x;return' '}).replace(/(^|\s)\/\S+/g,' ').trim();if(!s)return;
+ const words=s.toLowerCase().match(/go[+-]|[a-zäöü]+|\d+(?:[.,]\d+)?|[+-]/g)||[];
+ if(words[0]==='clearall'||(words[0]==='clear'&&words.length===1&&!S.sel.length)){S.prog={};S.sel=[];S.fxRun=[];S.step=null;out.push('ClearAll');return}
+ if(words[0]==='clear'||words[0]==='clearselection'){S.sel=[];S.step=null;out.push('Auswahl aufgehoben');return}
+ const tk=[];for(const w of words){if(/^\d/.test(w)){tk.push(w.replace(',','.'));continue}if(w==='please')continue;const k=ALIAS[w];if(!k)throw'Unbekanntes Wort „'+w+'“';if(k==='Full'&&tk[tk.length-1]!=='At')tk.push('At');tk.push(k)}
+ if(!tk.length)return;
+ if(tk[0]==='Label'){if(name===null)throw'Label braucht im Plugin einen Namen in Anführungszeichen, z. B. Label Group 1 "Front"';
+  const pool={Group:S.groups,Cue:S.cues,Preset:S.presets,Effect:S.effects}[tk[1]];if(!pool||!pool[tk[2]])throw tk[1]+' '+tk[2]+' gibt es nicht';pool[tk[2]].name=name;out.push(tk.join(' ')+' "'+name+'"');return}
+ if(tk[0]==='Edit')throw'Edit öffnet ein Fenster – im Plugin ohne Wirkung';
+ if(isNum(tk[0]))tk.unshift('Fixture');
+ out.push(run(tk));
+ if(name!==null&&tk[0]==='Store'){const pool={Group:S.groups,Cue:S.cues,Preset:S.presets,Effect:S.effects}[tk[1]];if(pool&&pool[tk[2]])pool[tk[2]].name=name}});
+ return out.join(' · ')}
+function luaRun(code,onDone){luaTimers.forEach(clearTimeout);luaTimers=[];
+ const ML=MiniLua,ts=ML.tostr,log=[],frames=[],ctx={echo:[],feedback:[],cmds:[],calledMain:false,err:null,slept:0,code};let vt=0;
+ const push=(type,text)=>{log.push({at:vt,type,text});if(type==='echo')ctx.echo.push(text);if(type==='feedback')ctx.feedback.push(text)};
+ snap();const start=JSON.stringify(S);
+ const T=o=>{const t=new ML.LuaTable();for(const k in o)t.set(k,o[k]);return t};
+ const handles=new Map();let hn=4096;
+ const env=ML.stdlib(t=>push('echo',t));
+ env.gma=T({
+  echo:(...a)=>{push('echo',a.map(ts).join(' '))},
+  feedback:(...a)=>{push('feedback',a.map(ts).join(' '))},
+  cmd:c=>{c=ts(c);ctx.cmds.push(c);try{const r=gmaCmd(c);push('cmd',c+(r?'  →  '+r:''))}catch(e){push('err','gma.cmd("'+c+'"): '+e)}if(frames.length<4000)frames.push({at:vt,st:JSON.stringify(S)})},
+  sleep:x=>{const d=Math.max(0,Number(x)||0);ctx.slept+=d;vt+=d*1000;if(vt>90000)throw new ML.LuaError('gma.sleep: im Trainer sind höchstens 90 Sekunden Gesamtzeit erlaubt',0)},
+  textinput:(t,d)=>{const v=d===undefined?'':ts(d);push('info','gma.textinput("'+ts(t)+'") → simuliert: der Vorgabewert "'+v+'" wurde übernommen');return v},
+  gui:T({confirm:(t,m)=>{push('info','gma.gui.confirm("'+ts(t)+'") → simuliert: OK gedrückt');return true},msgbox:(t,m)=>{push('msgbox',ts(t)+(m!==undefined?': '+ts(m):''))}}),
+  show:T({getobj:T({handle:n=>{const o=objFind(ts(n));if(!o)return undefined;const h=hn++;handles.set(h,o);return h},label:h=>{const o=handles.get(h);return o?o.label:undefined}}),
+   getvar:n=>({FADERPAGE:String(S.page),USER:'Administrator',TIME:new Date().toLocaleTimeString('de-DE'),DATE:new Date().toLocaleDateString('de-DE')})[String(n).replace('$','').toUpperCase()]})});
+ try{const r=ML.run(code,env);if(r[0]&&r[0].luaFn){ctx.calledMain=true;r[0].luaFn([],0)}}
+ catch(e){ctx.err=(e.line?'Zeile '+e.line+': ':'')+(e.message||String(e));push('err',ctx.err)}
+ const fin=JSON.stringify(S),total=Math.max(vt,...log.map(l=>l.at),0);
+ $('luaMon').innerHTML='';luaBusy=total>0;
+ const show=l=>{const d=document.createElement('div');d.className='ml m-'+l.type;d.textContent=({echo:'',feedback:'Feedback: ',cmd:'› ',err:'✘ Fehler: ',info:'ℹ ',msgbox:'□ MessageBox: '})[l.type]+l.text;$('luaMon').appendChild(d);$('luaMon').scrollTop=1e6;if(l.type==='feedback')msg(l.text,'ok')};
+ if(total>0){S=JSON.parse(start);fixFns();render();
+  frames.forEach(f=>luaTimers.push(setTimeout(()=>{S=JSON.parse(f.st);fixFns();render()},f.at)));
+  log.forEach(l=>luaTimers.push(setTimeout(()=>show(l),l.at)));
+  luaTimers.push(setTimeout(()=>{S=JSON.parse(fin);fixFns();render();luaBusy=false;done()},total+60))}
+ else{log.forEach(show);render();done()}
+ function done(){if(!log.length)show({type:'info',text:'Plugin ist durchgelaufen (keine Ausgabe).'});else if(!ctx.err)show({type:'info',text:'Plugin fertig.'});onDone&&onDone(ctx)}}
+
+/* ================= LUA: Lektionen ================= */
+const pd=f=>S.prog[f]&&S.prog[f].dim,pc=f=>S.prog[f]&&S.prog[f].col;
+const grpIs=(n,ids,name)=>!!S.groups[n]&&S.groups[n].ids.length===ids.length&&ids.every(i=>S.groups[n].ids.includes(i))&&(name===undefined||(S.groups[n].name||'')===name);
+const cueCol=(n,k)=>allF(n,v=>v.dim>=95&&colIs(v.col,k));
+const LUA=[
+{t:'Hallo Konsole: gma.echo und gma.feedback',
+ x:`<p class="ma2box"><b>Nur grandMA2:</b> Alles in diesem Kurs ist das <b>grandMA2-Lua-API</b> (Befehle beginnen mit <code>gma.</code>, z. B. <code>gma.cmd</code>). Die grandMA3 benutzt ein anderes API (<code>Cmd()</code>, <code>Printf()</code> …). Code von MA3 läuft auf der MA2 nicht und umgekehrt.</p><p><b>Lua</b> ist die Skriptsprache für grandMA2-Plugins. Ein Plugin ist einfach eine Textdatei (.lua), die die Konsole Zeile für Zeile ausführt.</p><p><code>gma.echo("…")</code> schreibt in den <b>System Monitor</b> (unten neben dem Editor). <code>gma.feedback("…")</code> schreibt in die Feedback-Zeile unter der Command Line, wo es der Operator sofort sieht.</p><p>Alles hinter <code>--</code> ist ein <b>Kommentar</b> und wird ignoriert. Groß- und Kleinschreibung zählt: <code>gma.Echo</code> gibt es nicht.</p>`,
+ start:`-- Mein erstes Plugin\ngma.echo("Hallo Konsole!")\n`,
+ task:'Schreib zusätzlich mit gma.feedback den Text „Plugin läuft“ in die Feedback-Zeile.',
+ hint:'Neue Zeile: gma.feedback, dann in Klammern und Anführungszeichen der Text.',
+ check:c=>c.feedback.some(t=>/plugin läuft/i.test(t))||'In der Feedback-Zeile kam noch kein „Plugin läuft“ an.',
+ sol:`-- Mein erstes Plugin\ngma.echo("Hallo Konsole!")\ngma.feedback("Plugin läuft")\n`},
+{t:'Variablen und Text verbinden',
+ x:`<p>Eine <b>Variable</b> ist ein Name für einen Wert: <code>local wert = 80</code>. Das <code>local</code> heißt: Die Variable gilt nur in diesem Plugin bzw. Block. Gewöhn es dir immer an.</p><p>Text steht in Anführungszeichen. Mit <code>..</code> (zwei Punkte) verbindest du Text und Zahlen: <code>"Fixture " .. 5</code> ergibt <code>Fixture 5</code>. Denk an die Leerzeichen <b>im</b> Text.</p>`,
+ start:`local fixture = 5\nlocal wert = 80\ngma.echo("Fixture " .. fixture)\n`,
+ task:'Gib mit gma.echo genau „Fixture 5 At 80“ aus. Bau den Text aus den beiden Variablen zusammen.',
+ hint:'Hänge mit .. noch " At " und die Variable wert an. Achte auf die Leerzeichen um At.',
+ check:c=>(c.echo.includes('Fixture 5 At 80')&&/wert/.test(c.code.replace(/local wert.*/,'')))||'Erwartet ist genau „Fixture 5 At 80“, gebaut mit den Variablen fixture und wert.',
+ sol:`local fixture = 5\nlocal wert = 80\ngma.echo("Fixture " .. fixture .. " At " .. wert)\n`},
+{t:'Rechnen mit Lua',
+ x:`<p>Lua rechnet mit <code>+ - * /</code>, Klammern gehen wie in der Schule. <code>%</code> ist der Rest einer Division (z. B. <code>7 % 2</code> = 1, praktisch für „gerade oder ungerade?“).</p><p>Ein Beispiel aus der Praxis: die <b>DMX-Adresse</b> von Geräten, die direkt hintereinander gepatcht sind: <code>start + (nummer - 1) * kanaele</code>.</p>`,
+ start:`local start = 1\nlocal kanaele = 16\nlocal nummer = 4\n-- Adresse von Gerät 4 ausrechnen:\nlocal adresse = 0\ngma.echo("Adresse: " .. adresse)\n`,
+ task:'Berechne die DMX-Startadresse von Gerät 4 (16 Kanäle, ab Adresse 1 lückenlos gepatcht) und gib „Adresse: 49“ aus.',
+ hint:'Ersetze die 0 durch die Formel start + (nummer - 1) * kanaele.',
+ check:c=>(c.echo.includes('Adresse: 49')&&/kanaele/.test(c.code.split('\n').filter(l=>/local adresse/.test(l)).join('')))||'Die Ausgabe muss „Adresse: 49“ sein, ausgerechnet mit den Variablen.',
+ sol:`local start = 1\nlocal kanaele = 16\nlocal nummer = 4\nlocal adresse = start + (nummer - 1) * kanaele\ngma.echo("Adresse: " .. adresse)\n`},
+{t:'gma.cmd: Befehle an die Konsole schicken',
+ x:`<p>Das Wichtigste für Plugins: <code>gma.cmd("…")</code> schickt einen Befehl an die Command Line, genau so, als hättest du ihn getippt. <b>Please</b> brauchst du dabei nicht.</p><p><code>ClearAll</code> leert den Programmer komplett (wie 3× Clear). Fang Plugins am besten damit an, damit nichts Altes mitkommt. Das Ergebnis siehst du rechts auf der Bühne.</p>`,
+ start:`gma.cmd("ClearAll")\ngma.cmd("Fixture 1 Thru 6 At 50")\n`,
+ task:'Ergänze: Fixture 7 Thru 12 sollen auf Full und Blau (Preset 4.3).',
+ hint:'Zwei weitere gma.cmd: einmal „Fixture 7 Thru 12 At Full“ und dann „At Preset 4.3“ (die Auswahl bleibt bestehen).',
+ check:c=>(range(7,12).every(f=>pd(f)===100&&colIs(pc(f),'4.3'))&&range(1,6).every(f=>pd(f)===50))||'Geräte 7–12 müssen auf 100 % und blau sein, 1–6 auf 50 %.',
+ sol:`gma.cmd("ClearAll")\ngma.cmd("Fixture 1 Thru 6 At 50")\ngma.cmd("Fixture 7 Thru 12 At Full")\ngma.cmd("At Preset 4.3")\n`},
+{t:'Befehle mit Variablen bauen',
+ x:`<p>Richtig stark wird gma.cmd mit Variablen: <code>gma.cmd("Group " .. gruppe .. " At " .. wert)</code>.</p><p>Häufigster Fehler: das Leerzeichen vergessen. <code>"Group" .. 3</code> ergibt <code>Group3</code>, und das versteht die echte Konsole nicht. Schau im Monitor nach, welcher Befehl wirklich ankommt (Zeilen mit ›).</p>`,
+ start:`local gruppe = 3\nlocal wert = 75\ngma.cmd("ClearAll")\n-- Hier den Befehl mit den Variablen bauen:\n\n`,
+ task:'Setz Group 3 (die ungeraden Geräte) mit einem gma.cmd auf den Wert aus der Variable wert. Nutze beide Variablen im Befehl.',
+ hint:'gma.cmd("Group " .. gruppe .. " At " .. wert)',
+ check:c=>{const m=c.code.match(/local wert\s*=\s*(\d+)/),w=m?+m[1]:75;return(/gma\.cmd\([^\n]*gruppe[^\n]*wert/.test(c.code)&&[1,3,5,7,9,11].every(f=>pd(f)===w)&&[2,4,6,8,10,12].every(f=>pd(f)===undefined))||'Die ungeraden Geräte müssen auf dem Wert der Variable stehen, die geraden unberührt. Im gma.cmd müssen gruppe und wert vorkommen.'},
+ sol:`local gruppe = 3\nlocal wert = 75\ngma.cmd("ClearAll")\ngma.cmd("Group " .. gruppe .. " At " .. wert)\n`},
+{t:'if: Entscheidungen treffen',
+ x:`<p>Mit <code>if</code> reagiert ein Plugin auf Bedingungen:</p><pre>if stimmung == "party" then\n  …\nelseif stimmung == "ballade" then\n  …\nelse\n  …\nend</pre><p>Vergleichen: <code>==</code> gleich, <code>~=</code> ungleich, <code>&lt; &gt; &lt;= &gt;=</code>. Achtung: <code>=</code> weist zu, <code>==</code> vergleicht. Jedes <code>if</code> braucht ein <code>end</code>.</p>`,
+ start:`local stimmung = "ruhig"  -- probier auch "party"\ngma.cmd("ClearAll")\ngma.cmd("Fixture 1 Thru 12 At Full")\nif stimmung == "party" then\n  gma.cmd("At Preset 4.6")\nelse\n  -- hier fehlt was\nend\n`,
+ task:'Bei „ruhig“ sollen alle Geräte Amber werden (Preset 4.5). Ergänze den else-Teil und lass das Plugin mit stimmung = "ruhig" laufen.',
+ hint:'Im else-Teil: gma.cmd("At Preset 4.5")',
+ check:c=>(/else/.test(c.code)&&/local stimmung\s*=\s*"ruhig"/.test(c.code)&&range(1,12).every(f=>colIs(pc(f),'4.5')))||'Mit stimmung = "ruhig" müssen alle 12 Geräte Amber sein.',
+ sol:`local stimmung = "ruhig"\ngma.cmd("ClearAll")\ngma.cmd("Fixture 1 Thru 12 At Full")\nif stimmung == "party" then\n  gma.cmd("At Preset 4.6")\nelse\n  gma.cmd("At Preset 4.5")\nend\n`},
+{t:'for-Schleifen: Wiederholen',
+ x:`<p>Eine <code>for</code>-Schleife wiederholt Befehle. <code>i</code> zählt dabei mit:</p><pre>for i = 1, 12 do\n  gma.echo("Gerät " .. i)\nend</pre><p>Mit einem dritten Wert gibst du die Schrittweite an: <code>for i = 12, 1, -1 do</code> zählt rückwärts.</p>`,
+ start:`gma.cmd("ClearAll")\nfor i = 1, 12 do\n  gma.echo("Gerät " .. i)\nend\n`,
+ task:'Mach daraus einen Helligkeits-Verlauf: Gerät i soll auf i * 8 Prozent gehen (Gerät 1 = 8 %, Gerät 12 = 96 %). Nutze gma.cmd in der Schleife.',
+ hint:'In der Schleife: gma.cmd("Fixture " .. i .. " At " .. i * 8)',
+ check:c=>range(1,12).every(f=>pd(f)===f*8)||'Gerät 1 muss auf 8 %, Gerät 2 auf 16 % … Gerät 12 auf 96 % stehen.',
+ sol:`gma.cmd("ClearAll")\nfor i = 1, 12 do\n  gma.cmd("Fixture " .. i .. " At " .. i * 8)\nend\n`},
+{t:'Gruppen automatisch anlegen',
+ x:`<p>Genau dafür nimmt man Plugins: Arbeit beim Show-Aufbau sparen. Zwei Tricks:</p><ul><li><code>/o</code> hinter Store (Overwrite) verhindert die Rückfrage, wenn das Ziel schon belegt ist. Ein Plugin, das auf ein Pop-up wartet, hängt sonst.</li><li>Namen mit Label: Den Befehl in <b>einfache</b> Anführungszeichen setzen, den Namen in <b>doppelte</b>: <code>gma.cmd('Label Group 11 "Block 1"')</code></li></ul>`,
+ start:`gma.cmd("ClearAll")\nfor b = 1, 4 do\n  local von = b * 3 - 2\n  local bis = b * 3\n  gma.cmd("Fixture " .. von .. " Thru " .. bis)\n  -- jetzt speichern und benennen\n\nend\ngma.cmd("ClearAll")\n`,
+ task:'Speichere in der Schleife Group 10 + b (also 11 bis 14) mit /o und benenne sie „Block 1“ bis „Block 4“.',
+ hint:'gma.cmd("Store Group " .. (10 + b) .. " /o") und gma.cmd(\'Label Group \' .. (10 + b) .. \' "Block \' .. b .. \'"\')',
+ check:c=>[1,2,3,4].every(b=>grpIs(10+b,[b*3-2,b*3-1,b*3],'Block '+b))||'Group 11–14 müssen je 3 Geräte enthalten und „Block 1“ … „Block 4“ heißen.',
+ sol:`gma.cmd("ClearAll")\nfor b = 1, 4 do\n  local von = b * 3 - 2\n  local bis = b * 3\n  gma.cmd("Fixture " .. von .. " Thru " .. bis)\n  gma.cmd("Store Group " .. (10 + b) .. " /o")\n  gma.cmd('Label Group ' .. (10 + b) .. ' "Block ' .. b .. '"')\nend\ngma.cmd("ClearAll")\n`},
+{t:'Tabellen und ipairs',
+ x:`<p>Eine <b>Tabelle</b> speichert mehrere Werte: <code>local farben = {"4.1", "4.3", "4.5"}</code>. <code>farben[1]</code> ist der erste Wert (Lua zählt ab 1), <code>#farben</code> die Anzahl.</p><p>Mit <code>ipairs</code> gehst du alle Einträge durch: <code>for i, preset in ipairs(farben) do … end</code>. <code>i</code> ist die Position, <code>preset</code> der Wert.</p>`,
+ start:`local farben = {"4.1", "4.3", "4.5"}\ngma.cmd("ClearAll")\ngma.cmd("Fixture 1 Thru 12 At Full")\nfor i, preset in ipairs(farben) do\n  gma.echo(i .. ": Preset " .. preset)\nend\n`,
+ task:'Speichere für jede Farbe einen Cue: Cue 41 = Preset 4.1, Cue 42 = 4.3, Cue 43 = 4.5 (Cue-Nummer = 40 + i). Benutze /o.',
+ hint:'In der Schleife: gma.cmd("At Preset " .. preset) und danach gma.cmd("Store Cue " .. (40 + i) .. " /o")',
+ check:c=>(cueCol('41','4.1')&&cueCol('42','4.3')&&cueCol('43','4.5'))||'Cue 41 muss rot, 42 blau und 43 amber sein (jeweils alle Geräte auf Full).',
+ sol:`local farben = {"4.1", "4.3", "4.5"}\ngma.cmd("ClearAll")\ngma.cmd("Fixture 1 Thru 12 At Full")\nfor i, preset in ipairs(farben) do\n  gma.cmd("At Preset " .. preset)\n  gma.cmd("Store Cue " .. (40 + i) .. " /o")\nend\n`},
+{t:'Eigene Funktionen',
+ x:`<p>Was du öfter brauchst, packst du in eine <b>Funktion</b>:</p><pre>local function farbe(gruppe, preset)\n  …\nend\nfarbe(2, "4.1")</pre><p>Die Werte in den Klammern heißen <b>Parameter</b>. Mit <code>return</code> kann eine Funktion auch etwas zurückgeben, z. B. <code>return start + (nr - 1) * 16</code>.</p>`,
+ start:`local function farbeFuer(gruppe, preset)\n  gma.cmd("Group " .. gruppe .. " At Full")\n  -- Farbe setzen fehlt noch\nend\n\ngma.cmd("ClearAll")\nfarbeFuer(2, "4.1")\n`,
+ task:'Ergänze die Funktion (Farbe setzen) und ruf sie zweimal auf: Group 2 (gerade) Rot (4.1) und Group 3 (ungerade) Grün (4.2).',
+ hint:'In der Funktion: gma.cmd("At Preset " .. preset). Unten noch: farbeFuer(3, "4.2")',
+ check:c=>(/function/.test(c.code)&&[2,4,6,8,10,12].every(f=>pd(f)===100&&colIs(pc(f),'4.1'))&&[1,3,5,7,9,11].every(f=>pd(f)===100&&colIs(pc(f),'4.2')))||'Gerade Geräte müssen rot, ungerade grün sein, alle auf Full, gesetzt über die Funktion.',
+ sol:`local function farbeFuer(gruppe, preset)\n  gma.cmd("Group " .. gruppe .. " At Full")\n  gma.cmd("At Preset " .. preset)\nend\n\ngma.cmd("ClearAll")\nfarbeFuer(2, "4.1")\nfarbeFuer(3, "4.2")\n`},
+{t:'gma.sleep: Abläufe mit Zeit',
+ x:`<p><code>gma.sleep(0.2)</code> wartet 0,2 Sekunden, bevor es weitergeht. Damit baust du zeitliche Abläufe, z. B. ein Lauflicht oder eine Einschalt-Sequenz.</p><p>Im Trainer spielt der Simulator den Ablauf nach dem Ausführen in Echtzeit ab. Auf der echten Konsole gilt: Plugins mit langen Pausen oder Endlosschleifen sind keine gute Idee. Dafür nimmt man besser Cues oder Effekte.</p>`,
+ start:`gma.cmd("ClearAll")\nfor i = 1, 12 do\n  gma.cmd("Fixture " .. i .. " At Full")\n  gma.sleep(0.15)\nend\n`,
+ task:'Mach daraus ein echtes Lauflicht: Nach der Pause soll jedes Gerät wieder auf 0 gehen, bevor das nächste angeht. Am Ende sind alle aus.',
+ hint:'Nach gma.sleep in der Schleife noch: gma.cmd("Fixture " .. i .. " At 0")',
+ check:c=>(c.slept>0&&c.cmds.length>=25&&range(1,12).every(f=>pd(f)===0))||'Jedes Gerät muss nach der Pause wieder auf 0 gehen (am Ende alle auf 0), mit gma.sleep dazwischen.',
+ sol:`gma.cmd("ClearAll")\nfor i = 1, 12 do\n  gma.cmd("Fixture " .. i .. " At Full")\n  gma.sleep(0.15)\n  gma.cmd("Fixture " .. i .. " At 0")\nend\n`},
+{t:'Abfragen: Gibt es das schon?',
+ x:`<p>Bevor ein Plugin etwas überschreibt, sollte es nachsehen:</p><ul><li><code>gma.show.getobj.handle("Group 1")</code> gibt eine Nummer (Handle) zurück, wenn es das Objekt gibt, sonst <code>nil</code>.</li><li><code>gma.show.getobj.label(handle)</code> liefert den Namen.</li><li><code>gma.textinput("Titel", "Vorgabe")</code> fragt den Operator nach einem Text. Im Trainer wird die Vorgabe genommen.</li><li><code>gma.gui.confirm("Titel", "Frage")</code> fragt Ja/Nein. Im Trainer immer OK.</li></ul><p><code>if h then</code> ist wahr, wenn h nicht nil ist. <code>if not h then</code> ist das Gegenteil.</p>`,
+ start:`local h = gma.show.getobj.handle("Group 1")\nif h then\n  gma.echo("Group 1 heißt: " .. gma.show.getobj.label(h))\nend\n`,
+ task:'Prüfe Group 1 bis 20 in einer Schleife. Gib für jede, die es NICHT gibt, „Group X ist frei“ aus (X = Nummer). Gib am Ende mit gma.feedback aus, wie viele frei sind.',
+ hint:'Zähler: local frei = 0. In der Schleife: local h = gma.show.getobj.handle("Group " .. i); if not h then … frei = frei + 1 end. Am Ende gma.feedback(frei .. " Gruppen frei")',
+ check:c=>{const exp=range(1,20).filter(g=>!S.groups[g]);const got=c.echo.map(t=>(t.match(/^Group (\d+) ist frei$/)||[])[1]).filter(Boolean).map(Number);
+  return(exp.length===got.length&&exp.every(g=>got.includes(g))&&c.feedback.some(t=>t.includes(String(exp.length))))||'Erwartet: '+exp.length+' Zeilen „Group X ist frei“ und ein Feedback mit der Zahl '+exp.length+'.'},
+ sol:`local frei = 0\nfor i = 1, 20 do\n  local h = gma.show.getobj.handle("Group " .. i)\n  if not h then\n    gma.echo("Group " .. i .. " ist frei")\n    frei = frei + 1\n  end\nend\ngma.feedback(frei .. " Gruppen frei")\n`},
+{t:'Plugin-Aufbau, XML und Import',
+ x:`<p>Ein echtes grandMA2-Plugin packt seinen Code in eine Funktion und gibt sie am Ende mit <code>return</code> an die Konsole. Die Konsole ruft sie beim Start des Plugins auf. Üblich ist <code>return Start</code> oder <code>return Start, Cleanup</code> (Cleanup läuft beim Beenden).</p><p>Zum Importieren brauchst du zwei Dateien mit gleichem Namen im Plugin-Ordner (bei USB üblicherweise <code>gma2/plugins</code>): die <b>.lua</b> mit dem Code und eine <b>.xml</b>, die auf sie zeigt. Dann im Plugins-Pool: Import. Benenne neue Versionen mit Versionsnummer, z. B. <code>MeinPlugin_v1.0</code>.</p><pre id="xmlTpl">&lt;?xml version="1.0" encoding="utf-8"?&gt;\n&lt;MA xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.malighting.de/grandma2/xml/MA" xsi:schemaLocation="http://schemas.malighting.de/grandma2/xml/MA http://schemas.malighting.de/grandma2/xml/3.9.60/MA.xsd" major_vers="3" minor_vers="9" stream_vers="60"&gt;\n  &lt;Info datetime="2026-11-23T20:00:00" showfile="" /&gt;\n  &lt;Plugin index="1" execute_on_load="0" name="MeinPlugin_v1.0" luafile="MeinPlugin_v1.0.lua" /&gt;\n&lt;/MA&gt;</pre><p class="note">Die Versionsnummern im XML-Kopf passen zu Software 3.9.60. Bei einer anderen Version exportierst du am besten ein vorhandenes Plugin aus deiner Show und nimmst dessen Kopf.</p>`,
+ start:`-- MeinPlugin v1.0\nlocal function Start()\n  gma.echo("MeinPlugin v1.0 gestartet")\n  gma.feedback("MeinPlugin v1.0 gestartet")\nend\n\n-- hier fehlt noch die Zeile, die Start an die Konsole übergibt\n`,
+ task:'Gib die Funktion Start mit return an die Konsole zurück. Erst dann läuft das Plugin. Vorher passiert beim Ausführen nichts.',
+ hint:'Ganz unten: return Start',
+ check:c=>(c.calledMain&&c.echo.some(t=>/gestartet/.test(t)))||'Die Start-Funktion wurde nicht aufgerufen. Steht ganz unten „return Start“?',
+ sol:`-- MeinPlugin v1.0\nlocal function Start()\n  gma.echo("MeinPlugin v1.0 gestartet")\n  gma.feedback("MeinPlugin v1.0 gestartet")\nend\n\nreturn Start\n`},
+{t:'Abschlussprojekt: Mini-ShowSetup',
+ x:`<p>Jetzt alles zusammen. Schreib ein Plugin <b>MiniShowSetup v1.0</b>, das beim Start Folgendes anlegt:</p><ul><li>Group 21 „Alle“ (1–12), Group 22 „Links“ (1–6), Group 23 „Rechts“ (7–12)</li><li>Cue 51 alle Rot, Cue 52 alle Blau, Cue 53 alle Weiß (Preset 4.4), jeweils auf Full</li><li>am Ende ClearAll und das Feedback „ShowSetup fertig“</li></ul><p>Tipp: eine Tabelle für die Gruppen, z. B. <code>{ {21, 1, 12, "Alle"}, … }</code>, und eine für die Farben. Mit <code>g[1]</code>, <code>g[2]</code> … greifst du auf die Werte zu.</p>`,
+ start:`-- MiniShowSetup v1.0\nlocal function Start()\n  gma.cmd("ClearAll")\n  -- Gruppen anlegen\n\n  -- Cues anlegen\n\n  gma.cmd("ClearAll")\n  gma.feedback("ShowSetup fertig")\nend\n\nreturn Start\n`,
+ task:'Bau das MiniShowSetup wie beschrieben. Geprüft werden Gruppen, Namen, Cues, der leere Programmer und das Feedback.',
+ hint:'Gruppen: Tabelle { {21,1,12,"Alle"}, {22,1,6,"Links"}, {23,7,12,"Rechts"} } und ipairs. Je Gruppe: Fixture von Thru bis, Store Group … /o, Label. Cues: Fixture 1 Thru 12 At Full, dann je Farbe At Preset und Store Cue … /o.',
+ check:c=>{if(!c.calledMain)return'Die Start-Funktion wurde nicht aufgerufen (return Start fehlt?).';
+  if(!(grpIs(21,range(1,12),'Alle')&&grpIs(22,range(1,6),'Links')&&grpIs(23,range(7,12),'Rechts')))return'Die Gruppen 21–23 stimmen noch nicht (Inhalt oder Name).';
+  if(!(cueCol('51','4.1')&&cueCol('52','4.3')&&cueCol('53','4.4')))return'Cue 51–53 stimmen noch nicht (Rot, Blau, Weiß, jeweils Full).';
+  if(!progClear())return'Am Ende muss der Programmer leer sein (ClearAll).';
+  return c.feedback.some(t=>/showsetup fertig/i.test(t))||'Das Feedback „ShowSetup fertig“ fehlt.'},
+ sol:`-- MiniShowSetup v1.0\nlocal function Start()\n  gma.cmd("ClearAll")\n  -- Gruppen anlegen\n  local gruppen = {\n    {21, 1, 12, "Alle"},\n    {22, 1, 6, "Links"},\n    {23, 7, 12, "Rechts"}\n  }\n  for _, g in ipairs(gruppen) do\n    gma.cmd("Fixture " .. g[2] .. " Thru " .. g[3])\n    gma.cmd("Store Group " .. g[1] .. " /o")\n    gma.cmd('Label Group ' .. g[1] .. ' "' .. g[4] .. '"')\n    gma.cmd("ClearAll")\n  end\n  -- Cues anlegen\n  local farben = {"4.1", "4.3", "4.4"}\n  gma.cmd("Fixture 1 Thru 12 At Full")\n  for i, preset in ipairs(farben) do\n    gma.cmd("At Preset " .. preset)\n    gma.cmd("Store Cue " .. (50 + i) .. " /o")\n  end\n  gma.cmd("ClearAll")\n  gma.feedback("ShowSetup fertig")\nend\n\nreturn Start\n`},
+{t:'Freies Programmieren',free:true,
+ x:`<p>Hier gibt es keine Aufgabe. Schreib eigene Plugins und probier sie im Simulator aus. Unter dem Editor im „Spickzettel“ steht, welche Befehle der Trainer kennt.</p>`,
+ start:`-- Spielwiese v1.0\nlocal function Start()\n  gma.cmd("ClearAll")\n  for runde = 1, 3 do\n    for i = 1, 12 do\n      gma.cmd("Fixture " .. i .. " At Full")\n      gma.cmd("At Preset 4." .. (runde + 2))\n      gma.sleep(0.05)\n    end\n  end\n  gma.feedback("fertig")\nend\n\nreturn Start\n`,
+ task:'Freies Üben – keine Prüfung.',hint:'Schau in den Spickzettel. Fehler stehen rot im Monitor, mit Zeilennummer.',check:()=>true,sol:''}
+];
+let lli=0,ldone=new Set();
+try{const v=JSON.parse(localStorage.getItem('ma2lua')||'{}');if(v.done)ldone=new Set(v.done);if(v.li!=null)lli=Math.min(v.li,LUA.length-1)}catch(e){}
+const lsave=()=>{try{localStorage.setItem('ma2lua',JSON.stringify({done:[...ldone],li:lli}))}catch(e){}};
+const codeKey=i=>'ma2lua_code_'+i;
+function getCode(i){try{const c=localStorage.getItem(codeKey(i));if(c!=null)return c}catch(e){}return LUA[i].start}
+function putCode(){try{localStorage.setItem(codeKey(lli),$('luaCode').value)}catch(e){}}
+function renderLua(){const l=LUA[lli];$('luaSel').innerHTML=LUA.map((x,i)=>`<option value="${i}">${ldone.has(i)?'✓ ':''}${i+1}. ${esc(x.t)}</option>`).join('');$('luaSel').value=lli;
+ $('luaStufe').textContent='Lua für grandMA2 · Lektion '+(lli+1)+' von '+LUA.length+(ldone.size?' · '+ldone.size+' geschafft':'');$('luaTitle').textContent=l.t;$('luaText').innerHTML=l.x;
+ if($('xmlTpl')&&!$('xmlCopy')){const b=document.createElement('button');b.className='fxb';b.id='xmlCopy';b.textContent='XML kopieren';b.onclick=()=>{try{navigator.clipboard.writeText($('xmlTpl').textContent).then(()=>msg('XML kopiert.','ok'),()=>msg('Kopieren nicht erlaubt – bitte markieren und kopieren.','err'))}catch(e){msg('Kopieren nicht erlaubt.','err')}};$('xmlTpl').after(b)}
+ $('luaCode').value=getCode(lli);gutter();$('luaTask').className='luatask'+(ldone.has(lli)&&!l.free?' ok':'');$('luaTask').innerHTML=(l.free?'':'<b>Aufgabe:</b> ')+esc(l.task)+(ldone.has(lli)&&!l.free?' <b>✔ geschafft</b>':'');
+ $('luaSolBtn').classList.toggle('hide',!l.sol);$('luaMon').innerHTML='<div class="ml m-info">System Monitor – hier erscheinen Ausgaben und Fehler.</div>';taskbar()}
+function gutter(){const n=$('luaCode').value.split('\n').length;$('luaGut').textContent=Array.from({length:n},(_,i)=>i+1).join('\n');$('luaGut').scrollTop=$('luaCode').scrollTop}
+function luaGo(){if(luaBusy){msg('Plugin läuft noch …');return}putCode();const l=LUA[lli];$('luaRun').disabled=true;
+ luaRun($('luaCode').value,ctx=>{$('luaRun').disabled=false;if(l.free)return;const r=ctx.err?'Erst den Fehler beheben (rot im Monitor).':l.check(ctx);
+  if(r===true){ldone.add(lli);lsave();$('luaTask').className='luatask ok';$('luaTask').innerHTML='<b>✔ Geschafft!</b> '+esc(l.task)+(lli<LUA.length-1?' <button class="big" id="luaNext" style="margin-left:6px;min-height:38px">Nächste Lektion ›</button>':'');const nb=$('luaNext');if(nb)nb.onclick=()=>{lli++;lsave();renderLua()};msg('✔ Lua-Aufgabe geschafft!','ok')}
+  else{$('luaTask').className='luatask bad';$('luaTask').innerHTML='<b>Noch nicht:</b> '+esc(r)+'<br><b>Aufgabe:</b> '+esc(l.task)}
+  [...$('luaSel').options].forEach((o,i)=>o.textContent=(ldone.has(i)?'✓ ':'')+(i+1)+'. '+LUA[i].t);$('luaSel').value=lli})}
+function luaInsert(txt){const ta=$('luaCode'),s=ta.selectionStart,e=ta.selectionEnd;const cur=txt.indexOf('§');const t=txt.replace('§','');
+ ta.value=ta.value.slice(0,s)+t+ta.value.slice(e);const pos=s+(cur<0?t.length:cur);ta.focus();ta.setSelectionRange(pos,pos);gutter();putCode()}
+const SNIP=[['( )','(§)'],['" "','"§"'],['..',' .. '],['=',' = '],['==',' == '],['~=',' ~= '],[',',', '],['{ }','{§}'],['[ ]','[§]'],['--','-- '],['local','local '],['end','end\n'],['if','if § then\n  \nend'],['for','for i = 1, 12 do\n  §\nend'],['function','local function §()\n  \nend'],['gma.cmd','gma.cmd("§")'],['gma.echo','gma.echo("§")'],['gma.sleep','gma.sleep(§)'],['⇥','  ']];
+$('luaBar').innerHTML=SNIP.map((s,i)=>`<button data-sn="${i}" aria-label="Einfügen ${esc(s[0])}">${esc(s[0])}</button>`).join('');
+$('luaBar').addEventListener('pointerdown',e=>{const b=e.target.closest('[data-sn]');if(!b)return;e.preventDefault();luaInsert(SNIP[+b.dataset.sn][1])});
+$('luaBar').addEventListener('click',e=>{const b=e.target.closest('[data-sn]');if(b&&e.detail===0)luaInsert(SNIP[+b.dataset.sn][1])});
+$('luaCode').addEventListener('input',()=>{gutter();putCode()});$('luaCode').addEventListener('scroll',gutter);
+$('luaCode').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Tab'){e.preventDefault();luaInsert('  ')}if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();luaGo()}});
+$('luaRun').onclick=luaGo;
+$('luaReset').onclick=()=>{$('luaCode').value=LUA[lli].start;gutter();putCode();msg('Startcode wiederhergestellt.')};
+$('luaSolBtn').onclick=()=>{$('luaCode').value=LUA[lli].sol;gutter();putCode();msg('Lösung geladen – schau sie dir an und tipp auf ▶ Ausführen.')};
+$('luaSel').addEventListener('change',e=>{putCode();lli=+e.target.value;lsave();renderLua()});
+$('luaPrev').onclick=()=>{putCode();lli=Math.max(0,lli-1);lsave();renderLua()};$('luaNextL').onclick=()=>{putCode();lli=Math.min(LUA.length-1,lli+1);lsave();renderLua()};
+
+/* ================= LERNEN ================= */
+let mode='learn',li=0,ti=0,done=new Set();
+try{const sv=JSON.parse(localStorage.getItem('ma2trainer')||'{}');if(sv.done)done=new Set(sv.done);if(sv.li!=null)li=Math.min(sv.li,L.length-1)}catch(e){}
+const save=()=>{try{localStorage.setItem('ma2trainer',JSON.stringify({done:[...done],li}))}catch(e){}};
+const kbify=s=>s.replace(/\[\[(.+?)\]\]/g,(_,k)=>`<span class="kb">${esc(k)}</span>`);
+const curTask=()=>mode==='learn'?L[li].tasks[ti]:null;
+function solution(e){return e.split(' ').map(w=>{const k=w==='Sequence'?'Sequ':w==='Executor'?'Exec':w;return /^[\d.]+$/.test(k)?k:`<span class="kb">${esc(k)}</span>`}).join(' ')+' <span class="kb">Please</span>'}
+function renderLesson(){const l=L[li];$('lStufe').textContent=STUFEN[l.s]+' · Lektion '+(li+1)+' von '+L.length;$('lTitle').textContent=l.t;$('lText').innerHTML=kbify(l.x);
+ const il=$('lIllu');if(l.illu){il.innerHTML=l.illu();il.classList.remove('hide')}else il.classList.add('hide');
+ $('lTasks').innerHTML=l.tasks.map((t,i)=>{let h='';if(i===ti&&t.type==='cmd'&&t.miss){h=t.miss>=2?`<div class="hint">Lösung: ${solution(t.expect[0])}</div>`:`<div class="hint">Noch nicht ganz. Schau genau auf die Reihenfolge der Wörter. Mit Esc oder Oops korrigierst du.</div>`}
+  if(i===ti&&t.type==='press'&&t.count>1)h=`<div class="hint">${Math.min(streak.k===t.key?streak.n:0,t.count)} / ${t.count}</div>`;
+  return `<li class="${i<ti?'done':i===ti?'cur':''}">${kbify(t.text)}${h}</li>`}).join('');
+ const fin=ti>=l.tasks.length;$('doneBox').classList.toggle('show',fin);$('doneMsg').textContent=li<L.length-1?'Weiter geht’s mit „'+L[li+1].t+'“.':'Du hast alle Lektionen geschafft – stark! Übe im Tasten-Quiz weiter.';
+ $('goNext').classList.toggle('hide',li>=L.length-1);
+ const keys=new Set();(l.x.match(/\[\[(.+?)\]\]/g)||[]).forEach(m=>keys.add(m.slice(2,-2)));const ct=l.tasks[ti];if(ct){(ct.text.match(/\[\[(.+?)\]\]/g)||[]).forEach(m=>keys.add(m.slice(2,-2)));if(ct.type!=='find'&&ct.key)keys.add(ct.key)}
+ if(ct&&ct.type==='find')keys.clear();
+ document.querySelectorAll('.k').forEach(b=>b.classList.toggle('glow',mode==='learn'&&keys.has(b.dataset.k)));
+ $('lessonSel').value=li;progress();placeFx();taskbar()}
+function taskbar(){const tb=$('taskbar');if(mode==='learn'){const l=L[li],t=l.tasks[ti];tb.classList.toggle('ok',!t);tb.innerHTML=t?`<b>Aufgabe ${ti+1}/${l.tasks.length}</b>${kbify(t.text)} <button class="big" data-help style="margin-left:6px;min-height:36px;padding:0 12px;background:#ffd400;color:#111">Hilfe</button>`:`<b>Geschafft!</b> Lektion „${esc(l.t)}“ ist fertig. <button class="big" id="tbNext" style="margin-left:8px;min-height:40px">Weiter ›</button>`;const nb=$('tbNext');if(nb)nb.onclick=()=>{openLessonAt(li+1);refreshSel()};tb.classList.remove('hide');const hb=tb.querySelector('[data-help]');if(hb)hb.onclick=showHelp}else if(mode==='lua'){const l=LUA[lli];tb.classList.toggle('ok',ldone.has(lli));tb.classList.remove('hide');tb.innerHTML=`<b>Lua ${lli+1}/${LUA.length}</b>${esc(l.task)} <button class="big" data-help style="margin-left:6px;min-height:36px;padding:0 12px;background:#ffd400;color:#111">Hilfe</button>`;tb.querySelector('[data-help]').onclick=showHelp}else if(mode==='quiz'){tb.classList.remove('ok');tb.innerHTML='<b>Quiz</b>'+$('quizQ').innerHTML}else tb.classList.add('hide')}
+function taskDone(){ti++;msg('✔ Richtig!','ok');if(ti>=L[li].tasks.length){done.add(li);save()}renderLesson()}
+function openLessonAt(i){li=Math.max(0,Math.min(L.length-1,i));ti=0;L[li].tasks.forEach(t=>t.miss=0);streak={k:null,n:0};if(L[li].setup==='cues')ensureCues();if(typeof L[li].setup==='function')L[li].setup();save();renderLesson();render();if(!matchMedia('(pointer:coarse) and (min-width:981px)').matches)$('left').scrollIntoView({block:'start',behavior:'smooth'});else $('left').scrollTop=0}
+function progress(){$('progt').textContent=done.size+' / '+L.length+' Lektionen';$('progb').style.width=(done.size/L.length*100)+'%'}
+$('lessonSel').innerHTML=L.map((l,i)=>`<option value="${i}">${done.has(i)?'✓ ':''}${i+1}. ${esc(l.t)}</option>`).join('');
+$('lessonSel').addEventListener('change',e=>openLessonAt(+e.target.value));
+$('prevL').onclick=()=>openLessonAt(li-1);$('nextL').onclick=()=>openLessonAt(li+1);$('goNext').onclick=()=>{openLessonAt(li+1);refreshSel()};
+function refreshSel(){[...$('lessonSel').options].forEach((o,i)=>o.textContent=(done.has(i)?'✓ ':'')+(i+1)+'. '+L[i].t);$('lessonSel').value=li}
+
+/* ================= QUIZ ================= */
+let qk=null,qs={ok:0,bad:0,st:0};
+function quizNew(){let k;do k=ALLKEYS[Math.floor(Math.random()*ALLKEYS.length)];while(k===qk||/^\d$/.test(k));qk=k;
+ const byDesc=Math.random()<.5;$('quizQ').innerHTML=byDesc?`Welche Taste macht das?<br><span style="font-size:16px;color:var(--mut)">${esc(D[k].replace(new RegExp(k.replace(/[.+-]/g,'\\$&'),'g'),'___'))}</span>`:`Wo ist die Taste <span class="kb">${esc(k)}</span>?`;$('quizFb').textContent='';taskbar()}
+function quizAnswer(k){if(!qk)return;if(k===qk){qs.ok++;qs.st++;$('quizFb').innerHTML='<span style="color:var(--ok)">✔ Richtig: '+esc(k)+'</span>';setTimeout(quizNew,900)}else{qs.bad++;qs.st=0;$('quizFb').innerHTML='<span style="color:var(--err)">✘ Das war '+esc(k)+'. Versuch es nochmal.</span>'}
+ $('qOk').textContent=qs.ok;$('qBad').textContent=qs.bad;$('qStreak').textContent=qs.st}
+$('quizSkip').onclick=quizNew;
+
+/* ================= LEXIKON ================= */
+function renderLex(){const q=norm($('lexQ').value);$('lexList').innerHTML=ALLKEYS.filter(k=>!/^\d$/.test(k)).filter(k=>!q||norm(k+' '+D[k]).includes(q)).map(k=>`<div><span class="kb">${esc(k)}</span><br>${esc(D[k])}</div>`).join('')||'<p>Nichts gefunden.</p>'}
+$('lexQ').addEventListener('input',renderLex);
+
+/* ================= MODI ================= */
+function setMode(m){mode=m;document.querySelectorAll('#modes button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));
+ ['learn','quiz','lex','fx','lua','free'].forEach(x=>$(x+'Pane').classList.toggle('hide',x!==m));
+ document.querySelectorAll('.k').forEach(b=>b.classList.remove('glow'));
+ if(m==='learn')renderLesson();if(m==='lua')renderLua();if(m==='quiz')quizNew();if(m==='lex')renderLex();placeFx();taskbar();try{history.replaceState(null,'','#'+m)}catch(e){}}
+$('modes').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setMode(b.dataset.m)});
+
+/* ================= LABEL-FENSTER ================= */
+let lab=null;
+function openLabel(ob,n){lab={ob,n};$('mTitle').textContent='Label '+ob+' '+n;$('mText').textContent='Gib einen Namen ein (wie auf der Konsole):';$('mInput').value='';$('modal').classList.add('show');setTimeout(()=>$('mInput').focus(),50)}
+function closeLabel(okk){if(okk&&lab){const v=$('mInput').value.trim(),{ob,n}=lab;const pool=ob==='Group'?S.groups:ob==='Cue'?S.cues:ob==='Preset'?S.presets:ob==='Effect'?S.effects:null;
+ if(pool&&!pool[n]&&ob==='Group'&&S.sel.length)pool[n]={name:'',ids:[...S.sel]};
+ if(pool&&pool[n]){pool[n].name=v;msg(ob+' '+n+' heißt jetzt „'+v+'“','ok')}else msg(ob+' '+n+' gibt es nicht – Name nicht vergeben','err')}
+ $('modal').classList.remove('show');lab=null;render()}
+$('mOk').onclick=()=>closeLabel(true);$('mCancel').onclick=()=>closeLabel(false);
+$('mInput').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')closeLabel(true);if(e.key==='Escape')closeLabel(false)});
+
+/* ================= PC-TASTATUR ================= */
+const KM={Enter:'Please',Escape:'Esc',Backspace:'Oops','+':'+','-':'-','.':'.',',':'.',f:'Fixture',g:'Group',t:'Thru',a:'At',c:'Cue',p:'Preset',s:'Store'};
+document.addEventListener('keydown',e=>{if(e.target.matches('input,select,textarea')||e.ctrlKey||e.metaKey||e.altKey)return;
+ let k=/^\d$/.test(e.key)?e.key:KM[e.key.length===1?e.key.toLowerCase():e.key];if(!k)return;e.preventDefault();press(k)});
+
+const ALIAS={fixture:'Fixture',fix:'Fixture',f:'Fixture',channel:'Channel',chan:'Channel',ch:'Channel',group:'Group',g:'Group',preset:'Preset',p:'Preset',sequence:'Sequence',sequ:'Sequence',seq:'Sequence',cue:'Cue',c:'Cue',executor:'Executor',exec:'Executor',effect:'Effect',eff:'Effect',macro:'Macro',page:'Page',view:'View',at:'At',a:'At',thru:'Thru',t:'Thru',full:'Full',if:'If',store:'Store',s:'Store',update:'Update',u:'Update',edit:'Edit',delete:'Delete',del:'Delete',copy:'Copy',move:'Move',assign:'Assign',label:'Label',goto:'Goto',off:'Off',on:'On','go+':'Go+',go:'Go+','go-':'Go-',top:'Top',pause:'Pause',temp:'Temp',select:'Select','+':'+','-':'-'};
+function typed(str){const parts=str.toLowerCase().match(/go[+-]|[a-zäöü]+|\d+(?:[.,]\d+)?|[+-]/g)||[];const out=[];
+ for(const w of parts){if(/^\d/.test(w)){out.push(w.replace(',','.'));continue}const k=ALIAS[w];if(!k){msg('Unbekanntes Wort: „'+w+'“','err');return false}
+  if(k==='Full'&&out[out.length-1]!=='At')out.push('At');out.push(k)}
+ if(!out.length)return false;tok=out;renderCmd();please();render();return true}
+$('typeForm').addEventListener('submit',e=>{e.preventDefault();const i=$('cmdIn');if(i.value.trim()){if(typed(i.value))i.value=''}else please()});
+$('cmdIn').addEventListener('input',e=>{const v=e.target.value.trim();$('cmd').innerHTML='<span class="pr">[Fixture]></span> '+esc(v)+'<span class="cu"></span>'});
+/* ===== HILFE ===== */
+function keySeq(e){const ks=[];e.split(' ').forEach(w=>{if(/^[\d.]+$/.test(w))ks.push(...w.split(''));else ks.push(w==='Sequence'?'Sequ':w==='Executor'?'Exec':w)});
+ const i=ks.indexOf('Full');if(i>0&&ks[i-1]==='At')ks.splice(i-1,1);return ks.concat('Please')}
+function simTok(ks){const t=[];ks.forEach(k=>{if(/^[\d.]$/.test(k)){const l=t[t.length-1];if(l!=null&&/^[\d.]+$/.test(l))t[t.length-1]=l+k;else t.push(k)}else if(k==='Full'){if(t[t.length-1]!=='At')t.push('At');t.push('Full')}else if(k!=='Please')t.push(TOK[k]||k)});return t.join(' ')}
+function where(k){const b=BLOCKS.find(b=>b.k.includes(k));return b?' Du findest sie im Bereich „'+b.n+'“.':''}
+let hKey=null,hSolHtml='',hCtl=null;
+function helpInfo(){const cur=disp();hKey=null;hSolHtml='';hCtl=null;
+ if(mode==='quiz'){hKey=qk;return`<p>Gesucht ist die Taste [[${qk}]].${where(qk)}</p><p>${esc(D[qk])}</p>`}
+ if(mode==='lua'){const l=LUA[lli];if(l.sol)hSolHtml='<pre class="solpre" style="white-space:pre-wrap;font:13px/1.45 JetBrains Mono,monospace;background:#0d0f12;color:#e8eaed;padding:8px;border-radius:8px">'+esc(l.sol)+'</pre><p>Oder tipp im Lua-Kurs auf „Lösung laden“.</p>';return`<p><b>Aufgabe:</b> ${esc(l.task)}</p><p><b>Tipp:</b> ${esc(l.hint)}</p><p>Fehler stehen rot im System Monitor, mit Zeilennummer. Tipp auf ▶ Ausführen, um zu prüfen.</p>`}
+ if(mode!=='learn')return`<p>Im freien Üben gibt es keine Aufgabe. So baust du einen Befehl: <b>Was</b> (z. B. [[Fixture]] 1 [[Thru]] 6) → <b>Funktion</b> ([[At]]) → <b>Wert</b> (50) → [[Please]].</p><p>Vertippt? [[Oops]] löscht das letzte Wort, [[Esc]] die ganze Zeile. Im Tasten-Lexikon steht zu jeder Taste eine Erklärung.</p>`;
+ const l=L[li],t=l.tasks[ti];
+ if(!t)return li<L.length-1?`<p>Diese Lektion ist fertig. Tipp auf „Weiter ›“ oder wähle oben die nächste Lektion.</p>`:`<p>Du hast alles geschafft! Übe im Tasten-Quiz weiter.</p>`;
+ if(t.type==='fx'){hCtl=t.ctl;if(t.sol)hSolHtml=kbify(t.sol);return`<p>Aufgabe: ${kbify(t.text)}</p><p>${t.help||'Das stellst du im Effekt-Editor in dieser Lektion ein. Die richtige Stelle blinkt gelb.'}</p>${t.ctl&&INFO[t.ctl]?'<p><b>Was der Wert macht:</b> '+esc(INFO[t.ctl])+'</p>':''}${t.ctl&&t.ctl.startsWith('enc_')?'<p>'+esc(EINFO[t.ctl.slice(4)])+' Tipp auf − / + oder zieh am Drehknopf.</p>':''}`}
+ if(t.type==='find'){hKey=t.key;return`<p>Du sollst nur die Taste [[${t.key}]] finden und antippen.${where(t.key)}</p><p>Was sie macht: ${esc(D[t.key]||'')}</p>`}
+ if(t.type==='press'){const n=streak.k===t.key?streak.n:0;hKey=t.key;
+  return`<p>Drück [[${t.key}]]${t.count>1?` insgesamt ${t.count}× hintereinander (noch ${t.count-n}×). Drück zwischendurch keine andere Taste, sonst fängt das Zählen neu an.`:'.'}${where(t.key)}</p>${tok.length?'<p>Achtung: In der Command Line steht noch etwas. Drück zuerst [[Esc]], um sie zu leeren.</p>':''}<p>${esc(D[t.key]||'')}</p>`}
+ const ks=keySeq(t.expect[0]);hSolHtml=solution(t.expect[0]);
+ let pos=-1;for(let i=0;i<ks.length;i++)if(simTok(ks.slice(0,i))===cur){pos=i}
+ if(pos<0){const back=tok.slice(0,-1).join(' ');let okBack=false;for(let i=0;i<ks.length;i++)if(simTok(ks.slice(0,i))===back)okBack=true;
+  if(okBack){hKey='Oops';return`<p>Fast! Nur das letzte Wort <b>${esc(tok[tok.length-1])}</b> ist falsch.</p><p>Drück [[Oops]], um es zu löschen. Danach hilft dir der Hilfe-Knopf weiter.</p>`}
+  hKey='Esc';return`<p>In der Command Line steht <b>${esc(cur)}</b>. Das passt nicht zur Aufgabe.</p><p>Drück [[Esc]], um die Zeile zu löschen, und fang neu an. (Mit [[Oops]] löschst du nur das letzte Wort.)</p><p>Gesucht ist: <b>${esc(t.expect[0])}</b></p>`}
+ const nk=ks[pos];hKey=nk;
+ const step=pos===0?'Fang so an':'Bis hierhin ist alles richtig. Als Nächstes';
+ const why=nk==='Please'?'Der Befehl ist komplett. [[Please]] führt ihn aus.':/^[\d.]$/.test(nk)?'Jetzt kommt die Zahl. Tipp die Ziffer [['+nk+']] auf dem Ziffernblock.':esc(D[nk]||'');
+ return`<p>Aufgabe: ${kbify(t.text)}</p><p><b>${step}: Taste [[${nk}]]</b>.${where(nk)}</p><p>${why}</p>`}
+function showHelp(){$('hBody').innerHTML=kbify(helpInfo());$('hSol').classList.toggle('hide',!hSolHtml);$('hShow').classList.toggle('hide',!hKey&&!hCtl);$('helpBox').classList.add('show');pointKey(hKey);pointCtl(hCtl)}
+function pointCtl(c){document.querySelectorAll('.pointc').forEach(x=>x.classList.remove('pointc'));if(!c)return;const el=document.querySelector(`[data-ctl="${c}"]`);if(el)el.classList.add('pointc')}
+function pointKey(k){document.querySelectorAll('.k.point').forEach(b=>b.classList.remove('point'));if(!k)return;const b=document.querySelector(`.k[data-k="${CSS.escape(k)}"]`);if(b)b.classList.add('point')}
+$('helpBtn').onclick=()=>$('helpBox').classList.contains('show')?closeHelp():showHelp();
+function closeHelp(){$('helpBox').classList.remove('show');pointKey(null);pointCtl(null)}
+$('hClose').onclick=closeHelp;
+$('hShow').onclick=()=>{if(hCtl){const el=document.querySelector(`[data-ctl="${hCtl}"]`);if(el){pointCtl(hCtl);el.scrollIntoView({block:'center',behavior:'smooth'})}return}const b=document.querySelector(`.k[data-k="${CSS.escape(hKey)}"]`);if(b){pointKey(hKey);b.scrollIntoView({block:'center',behavior:'smooth'})}};
+$('hSol').onclick=()=>{$('hBody').insertAdjacentHTML('beforeend',`<p><b>Lösungsweg:</b> ${hSolHtml}</p>`);$('hSol').classList.add('hide')};
+$('resetSim').onclick=()=>{S=fresh();FX.e=null;FX.id='1';undo=[];tok=[];msg('Simulator zurückgesetzt.');if(mode==='learn'&&L[li].setup==='cues')ensureCues();render()};
+$('resetProg').onclick=()=>{done.clear();save();refreshSel();progress();msg('Lernfortschritt gelöscht.')};
+
+window.addEventListener('error',e=>{try{msg('Programmfehler: '+e.message,'err')}catch(_){}});
+buildDesk();
+const h=location.hash.slice(1);
+if(L[li].setup==='cues')ensureCues();
+setMode(['learn','quiz','lex','fx','lua','free'].includes(h)?h:'learn');refreshSel();render();
+const jf=$('jsfail');if(jf)jf.remove();progress();
+}
+</script>
+</body>
+</html>
